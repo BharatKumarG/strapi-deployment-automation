@@ -4,59 +4,61 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy:
+  terraform:
+    name: Deploy with Terraform
     runs-on: ubuntu-latest
+
     env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_REGION: ${{ secrets.AWS_REGION }}
-      IMAGE_TAG: ${{ secrets.IMAGE_TAG }}
-      INSTANCE_ID: ${{ secrets.INSTANCE_ID }}
-      ECR_REPO_NAME: ${{ secrets.ECR_REPO_NAME }}
-      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+      AWS_REGION: us-east-1
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
       - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v1
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.0
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Terraform Init
         run: terraform init
+        working-directory: terraform
 
       - name: Terraform Plan
-        run: terraform plan -var "image_tag=${{ env.IMAGE_TAG }}"
+        run: terraform plan -out=tfplan
+        working-directory: terraform
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve -var "image_tag=${{ env.IMAGE_TAG }}"
+        run: terraform apply -auto-approve tfplan
+        working-directory: terraform
 
-      - name: Get EC2 Public IP from Terraform output
-        id: ec2ip
+      - name: Get Terraform Outputs
+        id: tf_output
         run: |
-          IP=$(terraform output -raw ec2_public_ip)
-          echo "EC2_PUBLIC_IP=$IP" >> $GITHUB_ENV
-          echo "Public IP: $IP"
+          echo "INSTANCE_ID=$(terraform output -raw ec2_instance_id)" >> $GITHUB_ENV
+          echo "PUBLIC_IP=$(terraform output -raw ec2_public_ip)" >> $GITHUB_ENV
+        working-directory: terraform
 
-      - name: Install AWS CLI
+      - name: Install Session Manager Plugin
         run: |
-          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-          unzip awscliv2.zip
-          sudo ./aws/install
+          curl "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb" -o "session-manager-plugin.deb"
+          sudo dpkg -i session-manager-plugin.deb
 
-      - name: Deploy Docker Container on EC2 via SSM
+      - name: Deploy Docker Image via SSM on EC2
         run: |
-          ECR_IMAGE="${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO_NAME }}:${{ env.IMAGE_TAG }}"
-
           aws ssm send-command \
             --document-name "AWS-RunShellScript" \
-            --comment "Deploying Strapi from ECR" \
-            --targets "Key=instanceIds,Values=${{ env.INSTANCE_ID }}" \
-            --parameters 'commands=[
-              "aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com",
-              "docker stop strapi || true",
-              "docker rm strapi || true",
-              "docker pull '${ECR_IMAGE}'",
-              "docker run -d --name strapi -p 1337:1337 ${ECR_IMAGE}"
-            ]' \
-            --region ${{ env.AWS_REGION }}
+            --instance-ids "$INSTANCE_ID" \
+            --comment "Deploy Strapi Docker Image" \
+            --parameters commands="sudo docker login -u AWS -p $(aws ecr get-login-password --region $AWS_REGION) ${{ secrets.ECR_REGISTRY }} && \
+                                   sudo docker pull ${{ secrets.ECR_IMAGE }} && \
+                                   sudo docker run -d -p 1337:1337 --name strapi ${{ secrets.ECR_IMAGE }}" \
+            --region $AWS_REGION \
+            --output text
