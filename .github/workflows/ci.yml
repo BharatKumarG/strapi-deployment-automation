@@ -34,6 +34,6 @@ jobs:
           docker buildx build \
             --platform linux/amd64 \
             --push \
-            -t 118273046134.dkr.ecr.ap-south-1.amazonaws.com/gbk-strapi-app:${{ env.IMAGE_TAG }} \
+            -t 118273046134.dkr.ecr.us-east-1.amazonaws.com/gbk-strapi-app:${{ env.IMAGE_TAG }} \
             .
 
