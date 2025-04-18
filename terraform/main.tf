@@ -35,8 +35,17 @@ resource "aws_instance" "strapi" {
               docker run -d -p 80:1337 ${var.ecr_image}
               EOF
 resource "aws_security_group" "strapi_sg" {
-  name        = "strapi_sg"
-  description = "Allow HTTP"
+  name        = "strapi-sg"
+  description = "Allow HTTP and SSH"
+  vpc_id      = data.aws_vpc.default.id
+
+  ingress {
+    description = "SSH"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 
   ingress {
     description = "HTTP"
@@ -53,5 +62,6 @@ resource "aws_security_group" "strapi_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
+
 
 }
