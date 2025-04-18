@@ -15,11 +15,13 @@ jobs:
 
     - name: Log in to AWS ECR
       uses: aws-actions/amazon-ecr-login@v1
+      with:
+        aws-region: us-east-1  # Ensure this matches your ECR region
 
     - name: Build Docker image
       run: |
         docker build -t ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:latest .
-        
+
     - name: Push Docker image to ECR
       run: |
         docker push ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:latest
