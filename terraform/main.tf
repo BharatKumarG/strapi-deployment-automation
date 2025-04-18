@@ -1,67 +1,37 @@
-provider "aws" {
-  region = var.aws_region
-}
+# main.tf
+resource "aws_instance" "strapi" {
+  ami                    = "ami-084568db4383264d4" # Use correct AMI ID for your region
+  instance_type          = "t2.medium"
+  key_name               = "bharath"
+  associate_public_ip_address = true
 
-# Fetch the latest Amazon Linux 2 AMI dynamically based on the region
-data "aws_ami" "latest_amazon_linux" {
-  most_recent = true
-  owners      = ["amazon"]
-
-  filter {
-    name   = "name"
-    values = [var.ami_name_filter]
-  }
-}
-
-# IAM Role for EC2 to access ECR
-resource "aws_iam_role" "ec2_role" {
-  name = "ec2-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action    = "sts:AssumeRole"
-        Effect    = "Allow"
-        Principal = {
-          Service = "ec2.amazonaws.com"
-        }
-      }
-    ]
-  })
-}
-
-# Attach policy to allow EC2 access to ECR
-resource "aws_iam_role_policy_attachment" "ecr_policy" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
-  role       = aws_iam_role.ec2_role.name
-}
-
-# EC2 Instance
-resource "aws_instance" "strapi_ec2" {
-  ami           = data.aws_ami.latest_amazon_linux.id  # Dynamically fetched AMI ID
-  instance_type = var.instance_type
+  # Attach security group (optional)
+  vpc_security_group_ids = [aws_security_group.strapi_sg.id]
 
   tags = {
-    Name = "StrapiEC2"
+    Name = "Strapi-EC2"
   }
 
-  # User data script to install Docker and run Strapi container
   user_data = <<-EOF
               #!/bin/bash
+              # Update packages
               yum update -y
-              amazon-linux-extras install docker
+
+              # Install Docker
+              amazon-linux-extras install docker -y
               service docker start
-              docker pull ${var.ecr_registry}/${var.ecr_repository}:${var.image_tag}
-              docker run -d -p 80:80 ${var.ecr_registry}/${var.ecr_repository}:${var.image_tag}
+              usermod -a -G docker ec2-user
+
+              # Install AWS CLI v2
+              curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+              unzip awscliv2.zip
+              sudo ./aws/install
+
+              # Login to ECR
+              aws ecr get-login-password --region ${var.aws_region} | docker login --username AWS --password-stdin ${var.ecr_registry}
+
+              # Pull and run the Docker image from ECR
+              docker pull ${var.ecr_image}
+              docker run -d -p 80:1337 ${var.ecr_image}
               EOF
-
-  # IAM role for EC2 to access ECR
-  iam_instance_profile = aws_iam_instance_profile.ec2_instance_profile.name
-}
-
-# IAM Instance Profile to attach the IAM role to the EC2 instance
-resource "aws_iam_instance_profile" "ec2_instance_profile" {
-  name = "ec2-instance-profile"
-  role = aws_iam_role.ec2_role.name
 }
