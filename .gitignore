@@ -1,0 +1,48 @@
+.env
+# Node modules folder
+node_modules/
+
+# Build and output directories
+dist/
+terraform/.terraform/
+
+# Environment variable files
+.env
+
+# Log files
+*.log
+
+# Dependency and package lock files (optional, if you prefer not to commit them)
+package-lock.json
+yarn.lock
+
+# Typescript compilation output (if you're using TypeScript)
+*.tsbuildinfo
+
+# Coverage directory (if you're using a testing framework with coverage)
+coverage/
+
+# OS generated files (optional, remove if unnecessary for your environment)
+.DS_Store
+Thumbs.db
+
+# Configuration files for IDEs and editors (optional)
+.vscode/
+.idea/
+
+# Database files (if any)
+database/
+
+# Temporary files and caches
+*.swp
+*.bak
+*.tmp
+*.cache
+
+# Docker and image files
+Dockerfile
+*.dockerignore
+
+# Specific files like README, favicon.png, and others are usually safe to include in your repo, so you don't need to ignore them unless they are built/generated
+README.md
+favicon.png
