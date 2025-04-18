@@ -13,10 +13,11 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v2
 
+    - name: Set AWS region
+      run: echo "AWS_REGION=us-east-1" >> $GITHUB_ENV  # Set the region environment variable
+
     - name: Log in to AWS ECR
       uses: aws-actions/amazon-ecr-login@v1
-      with:
-        aws-region: us-east-1  # Ensure this matches your ECR region
 
     - name: Build Docker image
       run: |
