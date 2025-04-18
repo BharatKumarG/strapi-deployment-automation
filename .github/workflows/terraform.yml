@@ -21,7 +21,10 @@ jobs:
       run: terraform plan -var "image_tag=${{ env.IMAGE_TAG }}" 
 
     - name: Terraform Apply
+      id: apply
       run: terraform apply -auto-approve -var "image_tag=${{ env.IMAGE_TAG }}"
 
     - name: Output EC2 Public IP
-      run: echo "EC2 Public IP: ${{ steps.terraform_apply.outputs.ec2_public_ip }}"
+      run: |
+        echo "Fetching EC2 Public IP from Terraform outputs..."
+        terraform output ec2_public_ip
