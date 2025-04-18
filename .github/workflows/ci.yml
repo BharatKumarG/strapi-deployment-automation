@@ -36,7 +36,7 @@ jobs:
         docker buildx build \
           -t ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }} \
           -t ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:latest \
-          . --load
+          --load .
 
     - name: Push Docker image to ECR
       run: |
