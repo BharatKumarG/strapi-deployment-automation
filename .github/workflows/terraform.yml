@@ -1,64 +1,55 @@
-name: CD Pipeline
+name: Deploy Strapi with Terraform
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+env:
+  IMAGE_URI: "{{secrets.DOCKER_USERNAME}}/strapi-app:latest"
 
 jobs:
-  terraform:
-    name: Deploy with Terraform
+  deploy-strapi:
+    name: Deploy Strapi with Terraform
     runs-on: ubuntu-latest
 
-    env:
-      AWS_REGION: us-east-1
-
     steps:
-      - name: Checkout repo
+      - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Set up Terraform
+      - name: Install Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.5.0
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v3
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+          aws-region: us-east-1
 
-      - name: Terraform Init
-        run: terraform init
-        working-directory: terraform
-
-      - name: Terraform Plan
-        run: terraform plan -out=tfplan
-        working-directory: terraform
-
-      - name: Terraform Apply
-        run: terraform apply -auto-approve tfplan
-        working-directory: terraform
-
-      - name: Get Terraform Outputs
-        id: tf_output
+      - name: Initialize Terraform
         run: |
-          echo "INSTANCE_ID=$(terraform output -raw ec2_instance_id)" >> $GITHUB_ENV
-          echo "PUBLIC_IP=$(terraform output -raw ec2_public_ip)" >> $GITHUB_ENV
-        working-directory: terraform
+          cd Terraform
+          terraform init \
+          -backend-config="bucket=${{ secrets.TF_BACKEND_BUCKET }}" \
+          -backend-config="key=terraform.tfstate" \
+          -backend-config="region=${{ secrets.TF_BACKEND_REGION }}" \
+          -backend-config="dynamodb_table=${{ secrets.TF_BACKEND_DYNAMO_TABLE }}" \
+          -backend-config="encrypt=true"
 
-      - name: Install Session Manager Plugin
+      - name: Generate Terraform Plan
         run: |
-          curl "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb" -o "session-manager-plugin.deb"
-          sudo dpkg -i session-manager-plugin.deb
+          cd Terraform
+          terraform plan -var "image_uri=$IMAGE_URI"
 
-      - name: Deploy Docker Image via SSM on EC2
+      - name: Apply Terraform Configuration
         run: |
-          aws ssm send-command \
-            --document-name "AWS-RunShellScript" \
-            --instance-ids "$INSTANCE_ID" \
-            --comment "Deploy Strapi Docker Image" \
-            --parameters commands="sudo docker login -u AWS -p $(aws ecr get-login-password --region $AWS_REGION) ${{ secrets.ECR_REGISTRY }} && \
-                                   sudo docker pull ${{ secrets.ECR_IMAGE }} && \
-                                   sudo docker run -d -p 1337:1337 --name strapi ${{ secrets.ECR_IMAGE }}" \
-            --region $AWS_REGION \
-            --output text
+          cd Terraform
+          terraform apply -var "image_uri=$IMAGE_URI" --auto-approve
+
+      - name: Destroy Terraform Configuration
+        run: |
+          cd Terraform
+          terraform destroy -var "image_uri=$IMAGE_URI" --auto-approve
