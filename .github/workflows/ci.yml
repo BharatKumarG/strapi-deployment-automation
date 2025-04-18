@@ -10,31 +10,35 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
+    - name: Checkout source code
+      uses: actions/checkout@v3
 
-    - name: Set up AWS credentials
-      uses: aws-actions/configure-aws-credentials@v2
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v3
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        # region input removed here
-        aws-region: us-east-1
+        aws-region: ap-south-1
 
-    - name: Log in to AWS ECR
-      id: ecr_login
-      uses: aws-actions/amazon-ecr-login@v1
-      with:
-        region: us-east-1  # Ensure the region is specified here
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Extract commit SHA
+      id: vars
+      run: echo "IMAGE_TAG=${GITHUB_SHA::7}" >> $GITHUB_ENV
 
     - name: Build Docker image
       run: |
-        docker build -t ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:latest .
+        docker buildx build \
+          -t ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }} \
+          -t ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:latest \
+          . --load
 
     - name: Push Docker image to ECR
       run: |
+        docker push ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
         docker push ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:latest
-
-    - name: Set output for image tag
-      id: image_tag
-      run: echo "IMAGE_TAG=latest" >> $GITHUB_ENV  # Use dynamic tag if needed
