@@ -1,6 +1,6 @@
 # main.tf
 resource "aws_instance" "strapi" {
-  ami                    = "ami-084568db4383264d4" # Use correct AMI ID for your region
+  ami                    = "ami-0e449927258d45bc4" # Use correct AMI ID for your region
   instance_type          = "t2.medium"
   key_name               = "bharath"
   associate_public_ip_address = true
