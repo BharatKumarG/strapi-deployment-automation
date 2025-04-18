@@ -6,7 +6,7 @@ variable "image_uri" {
   description = "URI of the Docker image to deploy"
 }
 
-resource "aws_security_group" "instance_sg" {
+resource "aws_security_group" "strapi_sg" {
   name        = "Strapi-app213"
   description = "Allow SSH, HTTP, HTTPS and port 1337"
 
@@ -46,7 +46,7 @@ resource "aws_security_group" "instance_sg" {
   }
 }
 
-resource "aws_instance" "strapi-deployment" {
+resource "aws_instance" "strapi_ec2" {
   ami                         = "ami-0e449927258d45bc4"
   instance_type               = "t2.medium"
   key_name                    = "bharath"
@@ -56,8 +56,8 @@ resource "aws_instance" "strapi-deployment" {
     #!/bin/bash
     sudo apt-get update -y
     curl -fsSL https://get.docker.com | sh
-    sudo docker pull dhruvmistry200/strapi-app:latest
-    sudo docker run -it -d -p 1337:1337 --name strapi dhruvmistry200/strapi-app:lates
+    sudo docker pull 118273046134.dkr.ecr.us-east-1.amazonaws.com/gbk-strapi-app:latest
+    sudo docker run -it -d -p 1337:1337 --name strapi 118273046134.dkr.ecr.us-east-1.amazonaws.com/gbk-strapi-app:latest
   EOF
   tags = {
     Name = "Strapi-Deployment-GBK"
