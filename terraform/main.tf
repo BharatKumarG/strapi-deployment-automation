@@ -36,11 +36,12 @@ resource "aws_security_group" "strapi_sg" {
 }
 
 resource "aws_instance" "strapi" {
-  ami                         = "ami-0e449927258d45bc4" # ✅ Saved AMI for Amazon Linux 2 (ap-south-1)
-  instance_type               = "t2.medium"
-  key_name                    = "bharath"
+  ami                    = "ami-0e449927258d45bc4" # AMI for us-east-1 (Amazon Linux 2)
+  instance_type          = "t2.medium"
+  key_name               = "bharath"
   associate_public_ip_address = true
-  vpc_security_group_ids      = [aws_security_group.strapi_sg.id]
+
+  vpc_security_group_ids = [aws_security_group.strapi_sg.id]
 
   tags = {
     Name = "Strapi-EC2"
@@ -58,9 +59,14 @@ resource "aws_instance" "strapi" {
               unzip awscliv2.zip
               sudo ./aws/install
 
-              # Login to ECR and run your Strapi container
+              # Login to ECR and pull image
               aws ecr get-login-password --region ${var.aws_region} | docker login --username AWS --password-stdin ${var.ecr_registry}
               docker pull ${var.ecr_image}
               docker run -d -p 80:1337 ${var.ecr_image}
               EOF
+}
+
+output "ec2_public_ip" {
+  description = "Public IP of the deployed EC2 instance"
+  value       = aws_instance.strapi.public_ip
 }
