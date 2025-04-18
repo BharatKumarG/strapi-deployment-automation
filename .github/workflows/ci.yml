@@ -26,15 +26,13 @@ jobs:
 
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Set image tag
-        run: echo "IMAGE_TAG=${GITHUB_SHA::7}" >> $GITHUB_ENV
+        
 
       - name: Build and push Docker image
         run: |
           docker buildx build \
             --platform linux/amd64 \
             --push \
-            -t 118273046134.dkr.ecr.us-east-1.amazonaws.com/gbk-strapi-app:${{ env.IMAGE_TAG }} \
+            -t 118273046134.dkr.ecr.us-east-1.amazonaws.com/gbk-strapi-app:latest \
             .
 
