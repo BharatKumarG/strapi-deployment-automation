@@ -1,18 +1,16 @@
 provider "aws" {
-  region = var.aws_region
+  region = "us-east-1"
 }
 
-data "aws_vpc" "default" {
-  default = true
+variable "image_uri" {
+  description = "URI of the Docker image to deploy"
 }
 
-resource "aws_security_group" "strapi_sg" {
-  name        = "strapi-sg"
-  description = "Allow HTTP and SSH"
-  vpc_id      = data.aws_vpc.default.id
+resource "aws_security_group" "instance_sg" {
+  name        = "Strapi-app213"
+  description = "Allow SSH, HTTP, HTTPS and port 1337"
 
   ingress {
-    description = "SSH"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
@@ -20,9 +18,22 @@ resource "aws_security_group" "strapi_sg" {
   }
 
   ingress {
-    description = "HTTP"
     from_port   = 80
     to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 1337
+    to_port     = 1337
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -35,38 +46,24 @@ resource "aws_security_group" "strapi_sg" {
   }
 }
 
-resource "aws_instance" "strapi" {
-  ami                    = "ami-0e449927258d45bc4" # AMI for us-east-1 (Amazon Linux 2)
-  instance_type          = "t2.medium"
-  key_name               = "bharath"
+resource "aws_instance" "strapi-deployment" {
+  ami                         = "ami-0e449927258d45bc4"
+  instance_type               = "t2.medium"
+  key_name                    = "bharath"
+  vpc_security_group_ids      = [aws_security_group.instance_sg.id]
   associate_public_ip_address = true
-
-  vpc_security_group_ids = [aws_security_group.strapi_sg.id]
-
-  tags = {
-    Name = "Strapi-EC2"
-  }
-
   user_data = <<-EOF
-              #!/bin/bash
-              yum update -y
-              amazon-linux-extras install docker -y
-              service docker start
-              usermod -a -G docker ec2-user
-
-              # Install AWS CLI v2
-              curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-              unzip awscliv2.zip
-              sudo ./aws/install
-
-              # Login to ECR and pull image
-              aws ecr get-login-password --region ${var.aws_region} | docker login --username AWS --password-stdin ${var.ecr_registry}
-              docker pull ${var.ecr_image}
-              docker run -d -p 80:1337 ${var.ecr_image}
-              EOF
+    #!/bin/bash
+    sudo apt-get update -y
+    curl -fsSL https://get.docker.com | sh
+    sudo docker pull dhruvmistry200/strapi-app:latest
+    sudo docker run -it -d -p 1337:1337 --name strapi dhruvmistry200/strapi-app:lates
+  EOF
+  tags = {
+    Name = "Strapi-Deployment-GBK"
+  }
 }
 
-output "ec2_public_ip" {
-  description = "Public IP of the deployed EC2 instance"
-  value       = aws_instance.strapi.public_ip
+output "instance_ip" {
+  value = aws_instance.strapi-deployment.public_ip
 }
