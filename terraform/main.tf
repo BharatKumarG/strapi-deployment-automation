@@ -24,12 +24,12 @@ resource "aws_instance" "strapi" {
               EOF
 
   tags = {
-    Name = "Strapi-EC2"
+    Name = "Strapi-EC2-GBK"
   }
 }
 
 resource "aws_security_group" "strapi_sg" {
-  name        = "strapi-sg"
+  name        = "strapi-sg-GBKB"
   description = "Allow HTTP and SSH"
   vpc_id      = data.aws_vpc.default.id
 
