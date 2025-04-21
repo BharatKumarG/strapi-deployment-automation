@@ -29,7 +29,7 @@ resource "aws_instance" "strapi" {
 }
 
 resource "aws_security_group" "strapi_sg" {
-  name        = "strapi-sg-GBKGB"
+  name        = "strapi-sg-GBKGy"
   description = "Allow HTTP and SSH"
   vpc_id      = data.aws_vpc.default.id
 
