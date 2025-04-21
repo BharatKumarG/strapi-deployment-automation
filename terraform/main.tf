@@ -46,16 +46,17 @@ resource "aws_security_group" "strapi_sg" {
 
 # Create EC2 instance
 resource "aws_instance" "strapi_instance" {
-  ami                    = "ami-0e449927258d45bc4"  # Replace with your AMI ID
-  instance_type          = "t2.medium"
-  subnet_id             = aws_subnet.strapi_subnet.id
-  security_group_ids    = [aws_security_group.strapi_sg.id]  # Reference by ID
-  associate_public_ip_address = true
-  key_name              = "bharath"
+  ami                           = "ami-0e449927258d45bc4"  # Replace with your AMI ID
+  instance_type                 = "t2.medium"
+  subnet_id                    = aws_subnet.strapi_subnet.id
+  vpc_security_group_ids       = [aws_security_group.strapi_sg.id]  # Use vpc_security_group_ids instead of security_group_ids
+  associate_public_ip_address  = true
+  key_name                     = "bharath"
   tags = {
     Name = "StrapiInstance_GBGB"
   }
 }
+
 
 # Create a subnet for the EC2 instance
 resource "aws_subnet" "strapi_subnet" {
