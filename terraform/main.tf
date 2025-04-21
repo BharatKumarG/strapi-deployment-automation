@@ -80,7 +80,7 @@ variable "image_tag" {
 
 # Use the image tag in user data to pull the Docker image
 data "template_file" "user_data" {
-  template = file("terraform/user_data.sh")
+template = file("user_data.sh")
 
   vars = {
     image_tag = var.image_tag
