@@ -1,5 +1,5 @@
 provider "aws" {
-  region = "us-east-1"  # Changed region to us-east-1
+  region = "us-east-1"
 }
 
 # Create VPC
@@ -46,8 +46,8 @@ resource "aws_security_group" "strapi_sg" {
 
 # Create EC2 instance
 resource "aws_instance" "strapi_instance" {
-  ami           = "ami-0c55b159cbfafe1f0"  # Choose an Amazon Linux AMI
-  instance_type = "t2.micro"
+  ami           = "ami-0e449927258d45bc4"  # Choose an Amazon Linux AMI
+  instance_type = "t2.medium"
   key_name      = "bharath"  # Changed to key name 'bharath'
   security_groups = [aws_security_group.strapi_sg.name]
   subnet_id     = aws_subnet.strapi_subnet.id
@@ -63,7 +63,7 @@ resource "aws_instance" "strapi_instance" {
 resource "aws_subnet" "strapi_subnet" {
   vpc_id                  = aws_vpc.strapi_vpc.id
   cidr_block              = "10.0.1.0/24"
-  availability_zone       = "us-east-1a"  # Changed to us-east-1
+  availability_zone       = "us-east-1a"
   map_public_ip_on_launch = true
 }
 
