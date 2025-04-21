@@ -17,7 +17,7 @@ latest_tag=$(aws ecr describe-images \
   --output text)
 
 # Pull the image with the latest tag
-docker pull 118273046134.dkr.ecr.us-east-1.amazonaws.com/gbk-strapi-app:$latest_tag
+docker pull 118273046134.dkr.ecr.us-east-1.amazonaws.com/gbk-strapi-app:new-tag
 
 # Run the container
-docker run -d -p 1337:1337 118273046134.dkr.ecr.us-east-1.amazonaws.com/gbk-strapi-app:$latest_tag
+docker run -d -p 1337:1337 118273046134.dkr.ecr.us-east-1.amazonaws.com/gbk-strapi-app:new-tag
