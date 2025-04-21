@@ -11,7 +11,7 @@ resource "aws_vpc" "strapi_vpc" {
 
 # Create Security Group for EC2 instance with updated name
 resource "aws_security_group" "strapi_sg" {
-  name        = "strapi.app.gbkg"  # Changed to strapi.app.gbkg
+  name        = "strapi.app.gbkgg"  # Changed to strapi.app.gbkg
   description = "Security group for Strapi EC2 instance"
   vpc_id      = aws_vpc.strapi_vpc.id
 
@@ -46,16 +46,14 @@ resource "aws_security_group" "strapi_sg" {
 
 # Create EC2 instance
 resource "aws_instance" "strapi_instance" {
-  ami           = "ami-0e449927258d45bc4"  # Choose an Amazon Linux AMI
-  instance_type = "t2.medium"
-  key_name      = "bharath"  # Changed to key name 'bharath'
-  security_groups = [aws_security_group.strapi_sg.name]
-  subnet_id     = aws_subnet.strapi_subnet.id
-
-  user_data = data.template_file.user_data.rendered
-
+  ami                    = "ami-0e449927258d45bc4"  # Replace with your AMI ID
+  instance_type          = "t2.medium"
+  subnet_id             = aws_subnet.strapi_subnet.id
+  security_group_ids    = [aws_security_group.strapi_sg.id]  # Reference by ID
+  associate_public_ip_address = true
+  key_name              = "bharath"
   tags = {
-    Name = "Strapi EC2 Instance"
+    Name = "StrapiInstance_GBGB"
   }
 }
 
