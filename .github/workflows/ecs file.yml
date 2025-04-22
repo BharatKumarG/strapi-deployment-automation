@@ -29,6 +29,14 @@ jobs:
           cd terraform2
           terraform init
 
+      - name: Terraform Import Security Group
+        run: |
+          terraform import aws_security_group.gbk_strapi_sg sg-0607adc472b7f671d  # Replace with actual security group ID
+
+      - name: Terraform Import Target Group
+        run: |
+          terraform import aws_lb_target_group.strapi_tg arn:aws:elasticloadbalancing:us-east-1:118273046134:targetgroup/gbkh-strapi-tg/arn:aws:iam::118273046134:role/ecsTaskExecutionRole1  # Replace with actual target group ARN
+
       - name: Generate Terraform Plan
         run: |
           cd terraform2
