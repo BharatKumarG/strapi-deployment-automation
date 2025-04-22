@@ -1,49 +1,40 @@
 provider "aws" {
-  region = var.region
+  region = "us-east-1"  # Update this with your desired AWS region
 }
 
+# VPC Setup
 resource "aws_vpc" "main" {
   cidr_block = "10.0.0.0/16"
-  enable_dns_support = true
-  enable_dns_hostnames = true
 }
 
+# Internet Gateway Setup
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.main.id
-  tags = {
-    Name = "strapi-igw"
-  }
 }
 
+# Public Subnet Setup
 resource "aws_subnet" "public_subnet" {
-  vpc_id     = aws_vpc.main.id
-  cidr_block = "10.0.0.0/24"
-  availability_zone = "us-east-1a"
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = "10.0.1.0/24"
+  availability_zone       = "us-east-1a"  # Update with your AZ
   map_public_ip_on_launch = true
-  tags = {
-    Name = "strapi-public-subnet"
-  }
 }
 
+# Route Table Setup
 resource "aws_route_table" "public_rt" {
   vpc_id = aws_vpc.main.id
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.igw.id
-  }
-  tags = {
-    Name = "strapi-public-rt"
-  }
 }
 
+# Route Table Association
 resource "aws_route_table_association" "public_rt_assoc" {
   subnet_id      = aws_subnet.public_subnet.id
   route_table_id = aws_route_table.public_rt.id
 }
 
+# Security Group Setup (using provided name)
 resource "aws_security_group" "gbk_strapi_sg" {
   name        = "gbk-strapi-sg"
-  description = "Allow HTTP/HTTPS and ECS"
+  description = "Allow HTTP and HTTPS traffic"
   vpc_id      = aws_vpc.main.id
 
   ingress {
@@ -59,13 +50,6 @@ resource "aws_security_group" "gbk_strapi_sg" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  
-  ingress {
-    from_port   = 1337
-    to_port     = 1337
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
 
   egress {
     from_port   = 0
@@ -73,91 +57,74 @@ resource "aws_security_group" "gbk_strapi_sg" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-
-  tags = {
-    Name = "gbk-strapi-sg"
-  }
 }
 
-resource "aws_ecs_cluster" "strapi_cluster" {
-  name = "strapi-cluster"
+# ALB Target Group
+resource "aws_lb_target_group" "strapi_tg" {
+  name     = "strapi-tg"
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = aws_vpc.main.id
 }
 
-resource "aws_ecs_task_definition" "strapi_task" {
-  family                   = "strapi-task"
-  network_mode             = "awsvpc"
-  requires_compatibilities = ["FARGATE"]
-  cpu                      = "512"
-  memory                   = "1024"
-  execution_role_arn       = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"  # Use an existing role ARN here
-
-  container_definitions = jsonencode([{
-    name      = "strapi"
-    image     = var.image_uri
-    essential = true
-    portMappings = [
-      {
-        containerPort = 1337
-        hostPort      = 1337
-      }
-    ]
-  }])
-}
-
+# ALB Setup
 resource "aws_lb" "strapi_alb" {
   name               = "strapi-alb"
   internal           = false
   load_balancer_type = "application"
+  security_groups   = [aws_security_group.gbk_strapi_sg.id]
   subnets            = [aws_subnet.public_subnet.id]
-  security_groups    = [aws_security_group.gbk_strapi_sg.id]
+
+  enable_deletion_protection = false
+  enable_cross_zone_load_balancing = true
 }
 
-resource "aws_lb_target_group" "strapi_tg" {
-  name     = "strapi-tg"
-  port     = 1337
-  protocol = "HTTP"
-  vpc_id   = aws_vpc.main.id
-
-  health_check {
-    path                = "/"
-    interval            = 30
-    timeout             = 5
-    healthy_threshold   = 5
-    unhealthy_threshold = 2
-    matcher             = "200"
-  }
+# ECS Cluster
+resource "aws_ecs_cluster" "strapi_cluster" {
+  name = "strapi-cluster"
 }
 
-resource "aws_lb_listener" "strapi_listener" {
-  load_balancer_arn = aws_lb.strapi_alb.arn
-  port              = 80
-  protocol          = "HTTP"
+# ECS Task Definition (with provided IAM role ARN)
+resource "aws_ecs_task_definition" "strapi_task" {
+  family                   = "strapi-task"
+  task_role_arn            = "arn:aws:iam::118273046134:role/ecsTaskExecutionRole1"  # Provided IAM role ARN
+  execution_role_arn       = "arn:aws:iam::118273046134:role/ecsTaskExecutionRole1"  # Provided IAM role ARN
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = "256"
+  memory                   = "512"
 
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.strapi_tg.arn
-  }
+  container_definitions = jsonencode([
+    {
+      name      = "strapi-container"
+      image     = "your-docker-image"  # Replace with your actual Docker image
+      essential = true
+      portMappings = [
+        {
+          containerPort = 1337
+          hostPort      = 1337
+          protocol      = "tcp"
+        }
+      ]
+    }
+  ])
 }
 
+# ECS Service (add if you want to deploy a service on ECS)
 resource "aws_ecs_service" "strapi_service" {
   name            = "strapi-service"
   cluster         = aws_ecs_cluster.strapi_cluster.id
   task_definition = aws_ecs_task_definition.strapi_task.arn
+  desired_count   = 1
   launch_type     = "FARGATE"
-
   network_configuration {
-    subnets         = [aws_subnet.public_subnet.id]
+    subnets          = [aws_subnet.public_subnet.id]
     security_groups = [aws_security_group.gbk_strapi_sg.id]
     assign_public_ip = true
   }
+}
 
-  load_balancer {
-    target_group_arn = aws_lb_target_group.strapi_tg.arn
-    container_name   = "strapi"
-    container_port   = 1337
-  }
-
-  desired_count = 1
-
-  depends_on = [aws_lb_listener.strapi_listener]
+# Outputs
+output "strapi_alb_url" {
+  value = aws_lb.strapi_alb.dns_name
 }
