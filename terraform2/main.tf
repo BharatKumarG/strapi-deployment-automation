@@ -108,7 +108,7 @@ resource "aws_lb_target_group" "strapi_tg" {
   name        = "gbkhtg-strapi-tg"
   port        = 80
   protocol    = "HTTP"
-  vpc_id      = var.vpc_id
+  vpc_id      = "vpc-1234567890abcdef0"
 
   target_type = "ip"  # <- Change this from "instance" to "ip"
 
