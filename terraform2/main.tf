@@ -7,19 +7,16 @@ data "aws_vpc" "default" {
   default = true
 }
 
-# Fetch the default subnet in the default VPC
+# Fetch the default subnet in the default VPC, but filter by availability zone
 data "aws_subnet" "default_subnet" {
   filter {
     name   = "vpc-id"
     values = [data.aws_vpc.default.id]
   }
-}
 
-# Fetch the existing internet gateway attached to the default VPC
-data "aws_internet_gateway" "existing_igw" {
   filter {
-    name   = "attachment.vpc-id"
-    values = [data.aws_vpc.default.id]
+    name   = "availabilityZone"
+    values = ["us-east-1a"]  # Replace with your desired availability zone
   }
 }
 
