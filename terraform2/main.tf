@@ -34,7 +34,7 @@ data "aws_subnet" "subnet_2" {
 
 # Define a Security Group for Strapi ECS service
 resource "aws_security_group" "gbk_strapi_sg" {
-  name        = "gbkh-strapi_sg"
+  name        = "gbkhd-strapi_sg"
   description = "Allow inbound traffic for Strapi ECS service"
   
   ingress {
@@ -105,7 +105,7 @@ resource "aws_lb" "strapi_alb" {
 
 # Create Load Balancer Target Group
 resource "aws_lb_target_group" "strapi_tg" {
-  name     = "gbkh-strapi-tg"
+  name     = "gbkhg-strapi-tg"
   port     = 80
   protocol = "HTTP"
   vpc_id   = data.aws_vpc.default.id
