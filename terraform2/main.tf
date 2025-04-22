@@ -2,30 +2,31 @@ provider "aws" {
   region = var.region
 }
 
-# Use the default VPC data source
-data "aws_vpc" "default" {
-  default = true
+resource "aws_vpc" "main" {
+  cidr_block = "10.0.0.0/16"
+  enable_dns_support = true
+  enable_dns_hostnames = true
 }
 
-# Create Internet Gateway
 resource "aws_internet_gateway" "igw" {
-  vpc_id = data.aws_vpc.default.id
+  vpc_id = aws_vpc.main.id
   tags = {
     Name = "strapi-igw"
   }
 }
 
-# Fetch subnets in the default VPC
-data "aws_subnets" "default" {
-  filter {
-    name   = "vpc-id"
-    values = [data.aws_vpc.default.id]
+resource "aws_subnet" "public_subnet" {
+  vpc_id     = aws_vpc.main.id
+  cidr_block = "10.0.0.0/24"
+  availability_zone = "us-east-1a"
+  map_public_ip_on_launch = true
+  tags = {
+    Name = "strapi-public-subnet"
   }
 }
 
-# Create Route Table and associate it with the subnet
 resource "aws_route_table" "public_rt" {
-  vpc_id = data.aws_vpc.default.id
+  vpc_id = aws_vpc.main.id
   route {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.igw.id
@@ -35,17 +36,15 @@ resource "aws_route_table" "public_rt" {
   }
 }
 
-# Route Table Association
 resource "aws_route_table_association" "public_rt_assoc" {
-  subnet_id      = data.aws_subnets.default.ids[0] # Using the first subnet ID
+  subnet_id      = aws_subnet.public_subnet.id
   route_table_id = aws_route_table.public_rt.id
 }
 
-# Security Group for Strapi service
-resource "aws_security_group" "strapi_sg" {
-  name        = "strapi-sg"
+resource "aws_security_group" "gbk_strapi_sg" {
+  name        = "gbk-strapi-sg"
   description = "Allow HTTP/HTTPS and ECS"
-  vpc_id      = data.aws_vpc.default.id
+  vpc_id      = aws_vpc.main.id
 
   ingress {
     from_port   = 80
@@ -60,7 +59,7 @@ resource "aws_security_group" "strapi_sg" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
-
+  
   ingress {
     from_port   = 1337
     to_port     = 1337
@@ -76,23 +75,21 @@ resource "aws_security_group" "strapi_sg" {
   }
 
   tags = {
-    Name = "strapi-sg"
+    Name = "gbk-strapi-sg"
   }
 }
 
-# ECS Cluster for Strapi
 resource "aws_ecs_cluster" "strapi_cluster" {
   name = "strapi-cluster"
 }
 
-# ECS Task Definition for Strapi
 resource "aws_ecs_task_definition" "strapi_task" {
   family                   = "strapi-task"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = "512"
   memory                   = "1024"
-  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
+  execution_role_arn       = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"  # Use an existing role ARN here
 
   container_definitions = jsonencode([{
     name      = "strapi"
@@ -107,45 +104,19 @@ resource "aws_ecs_task_definition" "strapi_task" {
   }])
 }
 
-# IAM Role for ECS Task Execution
-resource "aws_iam_role" "ecs_task_execution_role" {
-  name = "ecsTaskExecutionRole"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Principal = {
-          Service = "ecs-tasks.amazonaws.com"
-        }
-        Action = "sts:AssumeRole"
-      }
-    ]
-  })
-}
-
-# Attach the ECS Task Execution Policy to the IAM Role
-resource "aws_iam_role_policy_attachment" "ecs_task_exec_policy" {
-  role       = aws_iam_role.ecs_task_execution_role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
-}
-
-# Application Load Balancer for Strapi
 resource "aws_lb" "strapi_alb" {
   name               = "strapi-alb"
   internal           = false
   load_balancer_type = "application"
-  subnets            = data.aws_subnets.default.ids
-  security_groups    = [aws_security_group.strapi_sg.id]
+  subnets            = [aws_subnet.public_subnet.id]
+  security_groups    = [aws_security_group.gbk_strapi_sg.id]
 }
 
-# Load Balancer Target Group
 resource "aws_lb_target_group" "strapi_tg" {
   name     = "strapi-tg"
   port     = 1337
   protocol = "HTTP"
-  vpc_id   = data.aws_vpc.default.id
+  vpc_id   = aws_vpc.main.id
 
   health_check {
     path                = "/"
@@ -157,7 +128,6 @@ resource "aws_lb_target_group" "strapi_tg" {
   }
 }
 
-# Load Balancer Listener
 resource "aws_lb_listener" "strapi_listener" {
   load_balancer_arn = aws_lb.strapi_alb.arn
   port              = 80
@@ -169,7 +139,6 @@ resource "aws_lb_listener" "strapi_listener" {
   }
 }
 
-# ECS Service for Strapi
 resource "aws_ecs_service" "strapi_service" {
   name            = "strapi-service"
   cluster         = aws_ecs_cluster.strapi_cluster.id
@@ -177,8 +146,8 @@ resource "aws_ecs_service" "strapi_service" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets         = data.aws_subnets.default.ids
-    security_groups = [aws_security_group.strapi_sg.id]
+    subnets         = [aws_subnet.public_subnet.id]
+    security_groups = [aws_security_group.gbk_strapi_sg.id]
     assign_public_ip = true
   }
 
