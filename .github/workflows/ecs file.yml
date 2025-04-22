@@ -26,19 +26,19 @@ jobs:
 
       - name: Initialize Terraform
         run: |
-          cd Terraform2
+          cd terraform2
           terraform init
 
       - name: Generate Terraform Plan
         run: |
-          cd Terraform2
+          cd terraform2
           terraform plan \
             -var "image_uri=${{ secrets.ECR_REPOSITORY }}" \
             -var "region=${{ secrets.AWS_REGION }}"
 
       - name: Apply Terraform Configuration
         run: |
-          cd Terraform2
+          cd terraform2
           terraform apply \
             -var "image_uri=${{ secrets.ECR_REPOSITORY }}" \
             -var "region=${{ secrets.AWS_REGION }}" \
