@@ -32,7 +32,7 @@ jobs:
       - name: Generate Terraform Plan
         run: |
           cd terraform2
-          terraform plan -var="vpc_id=vpc-1234567890abcdef0" \
+          terraform plan \
             -var "image_uri=${{ secrets.ECR_REPOSITORY }}" \
             -var "region=${{ secrets.AWS_REGION }}"
 
