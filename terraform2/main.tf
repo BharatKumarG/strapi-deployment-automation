@@ -7,16 +7,28 @@ data "aws_vpc" "default" {
   default = true
 }
 
-# Fetch the default subnet in the default VPC, but filter by availability zone
-data "aws_subnet" "default_subnet" {
+# Fetch subnets in different Availability Zones
+data "aws_subnet" "subnet_1" {
   filter {
     name   = "vpc-id"
     values = [data.aws_vpc.default.id]
   }
-
+  
   filter {
     name   = "availabilityZone"
-    values = ["us-east-1a"]  # Replace with your desired availability zone
+    values = ["us-east-1a"]  # Change to your desired availability zone
+  }
+}
+
+data "aws_subnet" "subnet_2" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
+  }
+  
+  filter {
+    name   = "availabilityZone"
+    values = ["us-east-1b"]  # Change to your second desired availability zone
   }
 }
 
@@ -75,14 +87,19 @@ resource "aws_ecs_task_definition" "strapi_task" {
   DEFINITION
 }
 
-# Load Balancer (ALB)
+# Load Balancer (ALB) definition
 resource "aws_lb" "strapi_alb" {
   name               = "gbkh-strapi-alb"
   internal           = false
   load_balancer_type = "application"
-  security_groups    = [aws_security_group.gbk_strapi_sg.id]  # Using the defined security group
-  subnets            = [data.aws_subnet.default_subnet.id]
-  
+  security_groups    = [aws_security_group.gbk_strapi_sg.id]
+
+  # Reference two subnets in different Availability Zones
+  subnets = [
+    data.aws_subnet.subnet_1.id,
+    data.aws_subnet.subnet_2.id
+  ]
+
   enable_deletion_protection = false
 }
 
@@ -103,7 +120,7 @@ resource "aws_ecs_service" "strapi_service" {
   launch_type     = "FARGATE"
   
   network_configuration {
-    subnets          = [data.aws_subnet.default_subnet.id]
+    subnets          = [data.aws_subnet.subnet_1.id, data.aws_subnet.subnet_2.id]  # Using two subnets in different AZs
     security_groups = [aws_security_group.gbk_strapi_sg.id]  # Using the defined security group
     assign_public_ip = true
   }
