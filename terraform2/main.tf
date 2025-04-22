@@ -22,7 +22,7 @@ data "aws_subnet" "default_subnet" {
 
 # Define a Security Group for Strapi ECS service
 resource "aws_security_group" "gbk_strapi_sg" {
-  name        = "strapi_sg"
+  name        = "gbkh-strapi_sg"
   description = "Allow inbound traffic for Strapi ECS service"
   
   ingress {
