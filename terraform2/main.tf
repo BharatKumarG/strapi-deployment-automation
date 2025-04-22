@@ -7,55 +7,20 @@ data "aws_vpc" "default" {
   default = true
 }
 
-# Create a public subnet in the default VPC
+# Create a public subnet in the default VPC with a new CIDR block
 resource "aws_subnet" "public_subnet" {
   vpc_id                  = data.aws_vpc.default.id
-  cidr_block              = "10.0.1.0/24"
+  cidr_block              = "10.0.2.0/24"  # Changed the CIDR block
   availability_zone       = "us-east-1a"
   map_public_ip_on_launch = true
 }
 
-# Create an internet gateway for the default VPC
-resource "aws_internet_gateway" "igw" {
-  vpc_id = data.aws_vpc.default.id
-}
-
-# Create a route table for public access in the default VPC
-resource "aws_route_table" "public_rt" {
-  vpc_id = data.aws_vpc.default.id
-}
-
-# Associate the route table with the public subnet
-resource "aws_route_table_association" "public_rt_assoc" {
-  subnet_id      = aws_subnet.public_subnet.id
-  route_table_id = aws_route_table.public_rt.id
-}
-
-# Security group for Strapi
-resource "aws_security_group" "gbk_strapi_sg" {
-  name        = "gbk-strapi-sg"
-  description = "Allow inbound HTTP/HTTPS traffic"
-  vpc_id      = data.aws_vpc.default.id
-
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+# Do not create an internet gateway if it already exists in the default VPC
+# Referencing the existing internet gateway
+data "aws_internet_gateway" "existing_igw" {
+  filter {
+    name = "attachment.vpc-id"
+    values = [data.aws_vpc.default.id]
   }
 }
 
@@ -70,15 +35,7 @@ resource "aws_lb" "strapi_alb" {
   enable_cross_zone_load_balancing = true
 }
 
-# Create an Application Load Balancer Target Group
-resource "aws_lb_target_group" "strapi_tg" {
-  name     = "strapi-tg"
-  port     = 80
-  protocol = "HTTP"
-  vpc_id   = data.aws_vpc.default.id
-}
-
-# Create ECS Cluster
+# Create an ECS Cluster
 resource "aws_ecs_cluster" "strapi_cluster" {
   name = "strapi-cluster"
 }
@@ -90,6 +47,10 @@ resource "aws_ecs_task_definition" "strapi_task" {
   requires_compatibilities = ["FARGATE"]
   execution_role_arn    = "arn:aws:iam::118273046134:role/ecsTaskExecutionRole1"
   task_role_arn         = "arn:aws:iam::118273046134:role/ecsTaskExecutionRole1"
+  
+  # Add CPU and Memory definitions
+  cpu                    = "256"   # Added CPU definition
+  memory                 = "512"   # Added Memory definition
   
   container_definitions = <<DEFINITION
   [
