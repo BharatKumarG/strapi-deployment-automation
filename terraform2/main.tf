@@ -2,13 +2,8 @@ provider "aws" {
   region = var.region
 }
 
-resource "aws_vpc" "main" {
-  cidr_block           = "10.0.0.0/16"
-  enable_dns_support   = true
-  enable_dns_hostnames = true
-  tags = {
-    Name = "strapi-vpc"
-  }
+resource "aws_vpc" "default" {
+  default = true
 }
 
 resource "aws_internet_gateway" "igw" {
@@ -18,13 +13,10 @@ resource "aws_internet_gateway" "igw" {
   }
 }
 
-resource "aws_subnet" "public_subnet" {
-  vpc_id                  = aws_vpc.main.id
-  cidr_block              = "10.0.1.0/24"
-  map_public_ip_on_launch = true
-  availability_zone       = "${var.region}a"
-  tags = {
-    Name = "strapi-public-subnet"
+resource "aws_subnets" "default" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
   }
 }
 
@@ -59,6 +51,12 @@ resource "aws_security_group" "strapi_sg" {
   ingress {
     from_port   = 443
     to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+   ingress {
+    from_port   = 1337
+    to_port     = 1337
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
