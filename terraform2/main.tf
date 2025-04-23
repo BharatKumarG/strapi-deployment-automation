@@ -86,22 +86,22 @@ resource "aws_ecs_task_definition" "strapi_task" {
   memory                   = "512"
 
   container_definitions = <<DEFINITION
-  [
-    {
-      "name": "strapi-container",
-      "image": "your-docker-image", // Replace with your Docker Hub image
-      "cpu": 256,
-      "memory": 512,
-      "essential": true,
-      "portMappings": [
-        {
-          "containerPort": 80,
-          "hostPort": 80
-        }
-      ]
-    }
-  ]
-  DEFINITION
+ [
+  {
+    "name": "strapi-container",
+    "image": "118273046134.dkr.ecr.us-east-1.amazonaws.com/gbk-strapi-app:latest",
+    "cpu": 256,
+    "memory": 512,
+    "essential": true,
+    "portMappings": [
+      {
+        "containerPort": 80,
+        "hostPort": 80
+      }
+    ]
+  }
+]
+DEFINITION
 }
 
 # Application Load Balancer
