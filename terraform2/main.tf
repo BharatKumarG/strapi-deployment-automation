@@ -56,6 +56,13 @@ resource "aws_security_group" "gbk_strapi_sg" {
   vpc_id      = aws_vpc.main.id
 
   ingress {
+    from_port   = 1337  # Strapi default port
+    to_port     = 1337
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
@@ -82,26 +89,33 @@ resource "aws_ecs_task_definition" "strapi_task" {
   requires_compatibilities = ["FARGATE"]
   execution_role_arn       = "arn:aws:iam::118273046134:role/ecsTaskExecutionRole1"
   task_role_arn            = "arn:aws:iam::118273046134:role/ecsTaskExecutionRole1"
-  cpu                      = "2048"
-  memory                   = "4096"
+  cpu                      = "1024"  # Updated to 1 vCPU
+  memory                   = "2048"  # Updated to 2GB
 
-  container_definitions = <<DEFINITION
- [
-  {
-    "name": "strapi-container",
-    "image": "118273046134.dkr.ecr.us-east-1.amazonaws.com/gbk-strapi-app:latest",
-    "cpu": 256,
-    "memory": 512,
-    "essential": true,
-    "portMappings": [
-      {
-        "containerPort": 80,
-        "hostPort": 80
+  container_definitions = jsonencode([{
+    name         = "strapi-container",
+    image        = "118273046134.dkr.ecr.us-east-1.amazonaws.com/gbk-strapi-app:latest",
+    cpu          = 1024,
+    memory       = 2048,
+    essential    = true,
+    portMappings = [{
+      containerPort = 1337,  # Correct Strapi port
+      hostPort      = 1337
+    }],
+    environment = [
+      { name = "DATABASE_URL", value = "postgres://user:pass@host:5432/db" },
+      { name = "JWT_SECRET", value = "your-jwt-secret" },
+      { name = "ADMIN_JWT_SECRET", value = "your-admin-jwt-secret" }
+    ],
+    logConfiguration = {
+      logDriver = "awslogs",
+      options = {
+        "awslogs-group"         = "/ecs/strapi",
+        "awslogs-region"        = "us-east-1",
+        "awslogs-stream-prefix" = "ecs"
       }
-    ]
-  }
-]
-DEFINITION
+    }
+  }])
 }
 
 # Random ID for Load Balancer Name
@@ -122,18 +136,18 @@ resource "aws_lb" "strapi_alb" {
 # Target Group
 resource "aws_lb_target_group" "strapi_tg" {
   name        = "gbkhtg-strapi-tg"
-  port        = 80
+  port        = 1337  # Match Strapi port
   protocol    = "HTTP"
   vpc_id      = aws_vpc.main.id
   target_type = "ip"
 
   health_check {
-    path                = "/"
+    path                = "/_health"  # Health check endpoint
     interval            = 30
     timeout             = 5
     healthy_threshold   = 2
     unhealthy_threshold = 2
-    matcher             = "200"
+    matcher             = "200-399"
   }
 }
 
@@ -144,17 +158,18 @@ resource "aws_ecs_service" "strapi_service" {
   task_definition = aws_ecs_task_definition.strapi_task.arn
   desired_count   = 1
   launch_type     = "FARGATE"
+  enable_execute_command = true  # Enable ECS Exec
 
   network_configuration {
-    subnets         = [aws_subnet.subnet-1.id, aws_subnet.subnet-2.id]
-    security_groups = [aws_security_group.gbk_strapi_sg.id]
+    subnets          = [aws_subnet.subnet-1.id, aws_subnet.subnet-2.id]
+    security_groups  = [aws_security_group.gbk_strapi_sg.id]
     assign_public_ip = true
   }
 
   load_balancer {
     target_group_arn = aws_lb_target_group.strapi_tg.arn
     container_name   = "strapi-container"
-    container_port   = 80
+    container_port   = 1337  # Correct port
   }
 
   depends_on = [aws_lb_listener.strapi_listener]
