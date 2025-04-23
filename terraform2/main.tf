@@ -105,7 +105,7 @@ DEFINITION
 }
 
 # Application Load Balancer
-resource "aws_lb" "strapi_alb" resource "aws_lb" "strapi_alb" {
+resource "aws_lb" "strapi_alb" {
   name               = "gbkh-strapi-alb-${random_id.lb_id.hex}"
   internal           = false
   load_balancer_type = "application"
