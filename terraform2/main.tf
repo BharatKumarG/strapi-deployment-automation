@@ -119,16 +119,6 @@ resource "aws_lb" "strapi_alb" {
   enable_deletion_protection  = false
 }
 
-
-{
-  name               = "gbkh-strapi-alb"
-  internal           = false
-  load_balancer_type = "application"
-  security_groups    = [aws_security_group.gbk_strapi_sg.id]
-  subnets            = [aws_subnet.subnet-1.id, aws_subnet.subnet-2.id]
-  enable_deletion_protection = false
-}
-
 # Target Group
 resource "aws_lb_target_group" "strapi_tg" {
   name        = "gbkhtg-strapi-tg"
