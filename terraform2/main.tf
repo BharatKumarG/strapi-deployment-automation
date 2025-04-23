@@ -104,6 +104,11 @@ resource "aws_ecs_task_definition" "strapi_task" {
 DEFINITION
 }
 
+# Random ID for Load Balancer Name
+resource "random_id" "lb_id" {
+  byte_length = 4
+}
+
 # Application Load Balancer
 resource "aws_lb" "strapi_alb" {
   name                        = "gbkh-strapi-alb-${random_id.lb_id.hex}"
@@ -113,6 +118,7 @@ resource "aws_lb" "strapi_alb" {
   subnets                     = [aws_subnet.subnet-1.id, aws_subnet.subnet-2.id]
   enable_deletion_protection  = false
 }
+
 
 {
   name               = "gbkh-strapi-alb"
