@@ -105,8 +105,16 @@ DEFINITION
 }
 
 # Application Load Balancer
-resource "aws_lb" "strapi_albb" {
-  name               = "gbkh-strapi-albb"
+resource "aws_lb" "strapi_alb" resource "aws_lb" "strapi_alb" {
+  name               = "gbkh-strapi-alb-${random_id.lb_id.hex}"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.gbk_strapi_sg.id]
+  subnets            = [aws_subnet.subnet-1.id, aws_subnet.subnet-2.id]
+  enable_deletion_protection = false
+}
+{
+  name               = "gbkh-strapi-alb"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.gbk_strapi_sg.id]
