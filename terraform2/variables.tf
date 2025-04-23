@@ -9,7 +9,7 @@ variable "image_uri" {
   default     = "118273046134.dkr.ecr.us-east-1.amazonaws.com/gbk-strapi-app:latest"
 }
 
-variable "vpc_id" {
-  description = "The ID of the VPC where resources will be deployed"
-  type        = string
+variable "existing_vpc_id" {
+  description = "ID of the existing VPC"
+  default     = "vpc-0d255f5b20be72ef6"
 }
