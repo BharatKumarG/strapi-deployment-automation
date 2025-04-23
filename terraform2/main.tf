@@ -105,8 +105,8 @@ DEFINITION
 }
 
 # Application Load Balancer
-resource "aws_lb" "strapi_alb" {
-  name               = "gbkh-strapi-alb"
+resource "aws_lb" "strapi_albb" {
+  name               = "gbkh-strapi-albb"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.gbk_strapi_sg.id]
