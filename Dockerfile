@@ -17,7 +17,7 @@ COPY . .
 EXPOSE 1337
 
 # ✅ Build the app (optional: use if you're customizing admin panel)
-# RUN npm run build
+RUN npm run build
 
 # ✅ Run Strapi in production mode (for production environment)
 CMD ["npm", "run", "start"]
