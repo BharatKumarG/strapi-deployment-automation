@@ -36,6 +36,11 @@ jobs:
             -var "image_uri=${{ secrets.ECR_REPOSITORY }}" \
             -var "region=${{ secrets.AWS_REGION }}"
 
+      - name: Terraform Destroy (if necessary)
+        run: |
+          cd terraform2
+          terraform destroy -auto-approve || true  # Force destroy if necessary
+
       - name: Apply Terraform Configuration
         run: |
           cd terraform2
