@@ -29,15 +29,15 @@ jobs:
           cd terraform2
           terraform init
 
-      - name: Validate Terraform Configuration
-        run: |
-          cd terraform2
-          terraform validate
-
       - name: Format Terraform Configuration
         run: |
           cd terraform2
           terraform fmt -check
+
+      - name: Validate Terraform Configuration
+        run: |
+          cd terraform2
+          terraform validate
 
       - name: Generate Terraform Plan
         run: |
