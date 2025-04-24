@@ -1,5 +1,6 @@
 provider "aws" {
-  region = var.region
+  description = "AWS region"
+  region = "us-east-1"
 }
 
 # Create a custom VPC
@@ -94,7 +95,7 @@ resource "aws_ecs_task_definition" "strapi_task" {
 
   container_definitions = jsonencode([{
     name         = "strapi-container"
-    image        = var.image_uri
+    image        = "118273046134.dkr.ecr.us-east-1.amazonaws.com/gbk-strapi-app:latest"
     cpu          = 1024
     memory       = 2048
     essential    = true
