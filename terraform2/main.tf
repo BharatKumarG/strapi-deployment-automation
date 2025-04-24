@@ -107,6 +107,12 @@ resource "aws_ecs_task_definition" "strapi_task" {
       { name = "JWT_SECRET", value = "your-jwt-secret" },
       { name = "ADMIN_JWT_SECRET", value = "your-admin-jwt-secret" }
     ],
+
+    {
+          name  = "APP_KEYS"
+          value = "yourKey1,yourKey2"   # replace with your generated comma-separated keys
+    },
+
     logConfiguration = {
       logDriver = "awslogs",
       options = {
