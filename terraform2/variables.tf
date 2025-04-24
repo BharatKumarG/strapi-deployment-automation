@@ -13,3 +13,38 @@ variable "existing_vpc_id" {
   description = "ID of the existing VPC"
   default     = "vpc-0d255f5b20be72ef6"
 }
+
+variable "image_uri" {
+  type        = string
+  description = "URI of the Docker image in ECR"
+}
+
+variable "region" {
+  type        = string
+  description = "AWS region for deployment"
+}
+
+variable "app_keys" {
+  type        = string
+  description = "Application keys for Strapi"
+}
+
+variable "api_token_salt" {
+  type        = string
+  description = "API token salt for Strapi"
+}
+
+variable "admin_jwt_secret" {
+  type        = string
+  description = "Admin JWT secret for Strapi"
+}
+
+variable "transfer_token_salt" {
+  type        = string
+  description = "Transfer token salt for Strapi"
+}
+
+variable "jwt_secret" {
+  type        = string
+  description = "JWT secret for Strapi"
+}
