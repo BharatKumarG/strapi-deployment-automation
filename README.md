@@ -182,6 +182,56 @@ Let me know your thoughts or feedback. Happy to improve! 🙌
  
  Github URL Link : https://github.com/BharatKumarG/strapi-deployment-automation 
 
+## 🚀 Task 6 ✅ Deploying Strapi App on AWS ECS Fargate using Terraform + GitHub Actions 🧩🔁
+# 🔧 Project Highlights:
+🐳 Dockerized the Strapi CMS application
+📦 Pushed the Docker image to Amazon ECR
+📜 Provisioned infrastructure via Terraform to:
+🏗️ Set up VPC with public subnets, Internet Gateway, and route tables
+⚙️ Create an ECS Cluster & define Task Definition using the ECR image
+🚀 Launch ECS Fargate Service (no autoscaling for now)
+🌐 Configure Application Load Balancer (ALB) for traffic routing
+🔐 Set up Security Groups to allow HTTP/HTTPS
+🌍 Output ALB DNS for public access to Strapi CMS
+
+⚙️ CI/CD Fully Automated with GitHub Actions:
+🔁 Built Docker image
+📤 Pushed image to ECR
+🛠️ Ran terraform init, plan, and apply with GitHub Secrets (AWS creds)
+
+🧠 Key Takeaways:
+🧩 Used terraform_remote_state for clean infra state handling
+🔍 Verified task logs using aws ecs describe-tasks
+🔑 Solved AccessDeniedException by updating IAM permissions (ecr:GetAuthorizationToken)
+
+📹 Loom Video:
+https://www.loom.com/share/e5f35a54c6954755a1ca6d2e08b49b48?sid=bd0eb87e-350c-470b-8968-515cef1a8f01
+
+🔗 GitHub Repository:
+https://github.com/BharatKumarG/strapi-deployment-automation
 
 
+## ✅ Task 7 Completed 📅 Date: 24-04-2025
+# 👨‍💻 Team: Script Smiths
 
+## 📊 Successfully Implemented Amazon CloudWatch for Log Monitoring & Alerting 🔍📡
+# 🔧 Project Highlights:
+📁 Created dedicated CloudWatch Log Groups for application logs
+🧩 Defined Metric Filters to monitor custom log patterns (errors, warnings, and specific keywords)
+🚨 Set up CloudWatch Alarms based on log metric filters
+🔔 Configured alarms to send notifications on Slack/email (via SNS) for real-time alerting
+🛡️ Ensured logs are securely accessible with fine-tuned IAM roles & policies
+🔎 Verified setup through simulated test logs and confirmed alarm triggers
+
+🔗 Resources:
+📂 GitHub Repo:
+https://github.com/BharatKumarG/strapi-deployment-automation/blob/main/terraform3/main.tf
+
+📹 Demo Video:
+https://www.loom.com/share/03a71453854246c19c6642ac508dff35?sid=f1cb0e97-546e-4ed4-bffe-5cd4a4664bf4
+
+⚠️ Challenges Faced:
+🔧 Understanding and configuring the correct metric filters for the application's log patterns
+🔐 Ensuring IAM permissions were properly set to allow CloudWatch to access and monitor logs
+🎯 Fine-tuning alarm thresholds to avoid false positives while still ensuring effective monitoring
+⏳ Handling initial issues with log stream availability due to delayed ingestion in CloudWatch
