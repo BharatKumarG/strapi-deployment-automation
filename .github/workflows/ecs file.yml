@@ -24,6 +24,11 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      - name: Initialize Terraform
+        run: |
+          cd terraform2
+          terraform init
+
       - name: Validate Terraform Configuration
         run: |
           cd terraform2
