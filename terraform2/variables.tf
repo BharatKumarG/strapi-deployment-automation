@@ -1,13 +1,16 @@
+# Variable for image URI
+variable "image_uri" {
+  description = "The URI for the Docker image"
+  type        = string
+}
+
+# Variable for AWS region
 variable "region" {
-   description = "AWS region"
-   default     = "us-east-1"
- }
- 
- variable "image_uri" {
-   description = "The URI of the Docker image in ECR"
-   type        = string
-   default     = "118273046134.dkr.ecr.us-east-1.amazonaws.com/gbk-strapi-app:latest"
- }
+  description = "The AWS region"
+  type        = string
+  default     = "us-east-1"  # or whatever region you want to default to
+}
+
 
 variable "existing_vpc_id" {
   description = "ID of the existing VPC"
