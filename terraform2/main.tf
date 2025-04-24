@@ -103,15 +103,34 @@ resource "aws_ecs_task_definition" "strapi_task" {
       hostPort      = 1337
     }],
     environment = [
-      { name = "DATABASE_URL", value = "postgres://user:pass@host:5432/db" },
-      { name = "JWT_SECRET", value = "your-jwt-secret" },
-      { name = "ADMIN_JWT_SECRET", value = "your-admin-jwt-secret" }
-    ],
-
-    {
-          name  = "APP_KEYS"
-          value = "yourKey1,yourKey2"   # replace with your generated comma-separated keys
-    },
+      {
+        name  = "APP_KEYS"
+        value = "Jg4YbhVcsYoRouStfw0z2A==,CBUkQ7RFmML9J0rEHKlj5A==,4T8r0nRvF4vjRFVpXulISw=="
+      },
+      {
+        name  = "API_TOKEN_SALT"
+        value = "BSNERswHRhVxowfHjthtog=="
+      },
+      {
+        name  = "ADMIN_JWT_SECRET"
+        value = "xeMpWFLgUfL5Far9L177LA=="
+      },
+      {
+        name  = "TRANSFER_TOKEN_SALT"
+        value = "U7Dlnvp/F2LHezYIKCzHgQ=="
+      },
+      {
+        name  = "JWT_SECRET"
+        value = "SCSW/V83HscaFgxCGMPT3Q=="
+      },
+      {
+        name  = "DATABASE_CLIENT"
+        value = "sqlite"
+      },
+      {
+        name  = "DATABASE_FILENAME"
+        value = ".tmp/data.db"
+      },
 
     logConfiguration = {
       logDriver = "awslogs",
