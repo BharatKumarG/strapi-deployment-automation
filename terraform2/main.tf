@@ -98,49 +98,51 @@ resource "aws_ecs_task_definition" "strapi_task" {
     cpu          = 1024,
     memory       = 2048,
     essential    = true,
-    portMappings = [{
-      containerPort = 1337,  # Correct Strapi port
-      hostPort      = 1337
-    }],
-    environment = [
-      {
-        name  = "APP_KEYS"
-        value = "Jg4YbhVcsYoRouStfw0z2A==,CBUkQ7RFmML9J0rEHKlj5A==,4T8r0nRvF4vjRFVpXulISw=="
-      },
-      {
-        name  = "API_TOKEN_SALT"
-        value = "BSNERswHRhVxowfHjthtog=="
-      },
-      {
-        name  = "ADMIN_JWT_SECRET"
-        value = "xeMpWFLgUfL5Far9L177LA=="
-      },
-      {
-        name  = "TRANSFER_TOKEN_SALT"
-        value = "U7Dlnvp/F2LHezYIKCzHgQ=="
-      },
-      {
-        name  = "JWT_SECRET"
-        value = "SCSW/V83HscaFgxCGMPT3Q=="
-      },
-      {
-        name  = "DATABASE_CLIENT"
-        value = "sqlite"
-      },
-      {
-        name  = "DATABASE_FILENAME"
-        value = ".tmp/data.db"
-      },
+ portMappings = [{
+    containerPort = 1337
+    hostPort      = 1337
+  }]
 
-    logConfiguration = {
-      logDriver = "awslogs",
-      options = {
-        "awslogs-group"         = "/ecs/strapi",
-        "awslogs-region"        = "us-east-1",
-        "awslogs-stream-prefix" = "ecs"
-      }
+  environment = [
+    {
+      name  = "APP_KEYS"
+      value = "Jg4YbhVcsYoRouStfw0z2A==,CBUkQ7RFmML9J0rEHKlj5A==,4T8r0nRvF4vjRFVpXulISw=="
+    },  # ← comma here :contentReference[oaicite:4]{index=4}
+    {
+      name  = "API_TOKEN_SALT"
+      value = "BSNERswHRhVxowfHjthtog=="
+    },  # ← comma here
+    {
+      name  = "ADMIN_JWT_SECRET"
+      value = "xeMpWFLgUfL5Far9L177LA=="
+    },  # ← comma here
+    {
+      name  = "TRANSFER_TOKEN_SALT"
+      value = "U7Dlnvp/F2LHezYIKCzHgQ=="
+    },  # ← comma here
+    {
+      name  = "JWT_SECRET"
+      value = "SCSW/V83HscaFgxCGMPT3Q=="
+    },  # ← comma here
+    {
+      name  = "DATABASE_CLIENT"
+      value = "sqlite"
+    },  # ← comma here
+    {
+      name  = "DATABASE_FILENAME"
+      value = ".tmp/data.db"
+    }   # No comma on the last item
+  ]    # End of environment list :contentReference[oaicite:5]{index=5}
+
+  logConfiguration = {
+    logDriver = "awslogs"
+    options = {
+      awslogs-group         = "/ecs/strapi"
+      awslogs-region        = "us-east-1"
+      awslogs-stream-prefix = "ecs"
     }
-  }])
+  }
+}])
 }
 
 # Random ID for Load Balancer Name
