@@ -1,17 +1,3 @@
-# Variable for image URI
-variable "image_uri" {
-  description = "The URI for the Docker image"
-  type        = string
-}
-
-# Variable for AWS region
-variable "region" {
-  description = "The AWS region"
-  type        = string
-  default     = "us-east-1"  # or whatever region you want to default to
-}
-
-
 variable "existing_vpc_id" {
   description = "ID of the existing VPC"
   default     = "vpc-0d255f5b20be72ef6"
