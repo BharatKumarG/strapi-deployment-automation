@@ -1,9 +1,7 @@
 name: Build and Push ECR Image
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 permissions:
   contents: read
