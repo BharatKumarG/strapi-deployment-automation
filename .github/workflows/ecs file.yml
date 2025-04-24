@@ -14,7 +14,7 @@ jobs:
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v2
-  
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
@@ -54,12 +54,4 @@ jobs:
       - name: Apply Terraform Configuration
         run: |
           cd terraform2
-          terraform apply \
-            -var="image_uri=${{ secrets.ECR_REPOSITORY }}" \
-            -var="region=${{ secrets.AWS_REGION }}" \
-            -var="app_keys=${{ secrets.APP_KEYS }}" \
-            -var="api_token_salt=${{ secrets.API_TOKEN_SALT }}" \
-            -var="admin_jwt_secret=${{ secrets.ADMIN_JWT_SECRET }}" \
-            -var="transfer_token_salt=${{ secrets.TRANSFER_TOKEN_SALT }}" \
-            -var="jwt_secret=${{ secrets.JWT_SECRET }}" \
-            --auto-approve
+          terraform apply -auto-approve
