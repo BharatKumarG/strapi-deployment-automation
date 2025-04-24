@@ -1,6 +1,5 @@
 provider "aws" {
-  description = "AWS region"
-  region = "us-east-1"
+  region = var.region  # Uses variable instead of hardcoding
 }
 
 # Create a custom VPC
@@ -50,24 +49,38 @@ resource "aws_route_table_association" "b" {
   route_table_id = aws_route_table.rt.id
 }
 
-# Security Group for ECS
-resource "aws_security_group" "gbk_strapi_sg" {
-  name        = "gbkdhd-strapi_sg"
-  description = "Allow inbound traffic for Strapi ECS service"
+# Security Group for ALB
+resource "aws_security_group" "alb_sg" {
+  name        = "gbkdhd-strapi-alb-sg"
+  description = "Allow HTTP traffic to ALB"
   vpc_id      = aws_vpc.main.id
-
-  ingress {
-    from_port   = 1337  # Strapi default port
-    to_port     = 1337
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
 
   ingress {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# Security Group for ECS
+resource "aws_security_group" "ecs_sg" {
+  name        = "gbkdhd-strapi-ecs-sg"
+  description = "Allow traffic from ALB to ECS"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port       = 1337
+    to_port         = 1337
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb_sg.id]
   }
 
   egress {
@@ -90,12 +103,12 @@ resource "aws_ecs_task_definition" "strapi_task" {
   requires_compatibilities = ["FARGATE"]
   execution_role_arn       = "arn:aws:iam::118273046134:role/ecsTaskExecutionRole1"
   task_role_arn            = "arn:aws:iam::118273046134:role/ecsTaskExecutionRole1"
-  cpu                      = "1024"  # 1 vCPU
-  memory                   = "2048"  # 2GB
+  cpu                      = "1024"
+  memory                   = "2048"
 
   container_definitions = jsonencode([{
     name         = "strapi-container"
-    image        = "118273046134.dkr.ecr.us-east-1.amazonaws.com/gbk-strapi-app:latest"
+    image        = var.image_uri  # Uses variable
     cpu          = 1024
     memory       = 2048
     essential    = true
@@ -107,7 +120,7 @@ resource "aws_ecs_task_definition" "strapi_task" {
     environment = [
       {
         name  = "APP_KEYS"
-        value = var.app_keys  # Sensitive variable
+        value = var.app_keys
       },
       {
         name  = "API_TOKEN_SALT"
@@ -139,7 +152,7 @@ resource "aws_ecs_task_definition" "strapi_task" {
       logDriver = "awslogs"
       options = {
         awslogs-group         = "/ecs/strapi"
-        awslogs-region        = var.region  # Region variable used
+        awslogs-region        = var.region
         awslogs-stream-prefix = "ecs"
       }
     }
@@ -156,7 +169,7 @@ resource "aws_lb" "strapi_alb" {
   name                        = "gbkh-strapi-alb-${random_id.lb_id.hex}"
   internal                    = false
   load_balancer_type          = "application"
-  security_groups             = [aws_security_group.gbk_strapi_sg.id]
+  security_groups             = [aws_security_group.alb_sg.id]
   subnets                     = [aws_subnet.subnet-1.id, aws_subnet.subnet-2.id]
   enable_deletion_protection  = false
 }
@@ -164,13 +177,13 @@ resource "aws_lb" "strapi_alb" {
 # Target Group
 resource "aws_lb_target_group" "strapi_tg" {
   name        = "gbkhtg-strapi-tg"
-  port        = 1337  # Strapi port
+  port        = 1337
   protocol    = "HTTP"
   vpc_id      = aws_vpc.main.id
   target_type = "ip"
 
   health_check {
-    path                = "/_health"  # Health check endpoint
+    path                = "/"  # Valid health check endpoint
     interval            = 30
     timeout             = 5
     healthy_threshold   = 2
@@ -186,11 +199,11 @@ resource "aws_ecs_service" "strapi_service" {
   task_definition = aws_ecs_task_definition.strapi_task.arn
   desired_count   = 1
   launch_type     = "FARGATE"
-  enable_execute_command = true  # Enable ECS Exec
+  enable_execute_command = true
 
   network_configuration {
     subnets          = [aws_subnet.subnet-1.id, aws_subnet.subnet-2.id]
-    security_groups  = [aws_security_group.gbk_strapi_sg.id]
+    security_groups  = [aws_security_group.ecs_sg.id]
     assign_public_ip = true
   }
 
