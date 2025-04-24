@@ -89,24 +89,24 @@ resource "aws_ecs_task_definition" "strapi_task" {
   requires_compatibilities = ["FARGATE"]
   execution_role_arn       = "arn:aws:iam::118273046134:role/ecsTaskExecutionRole1"
   task_role_arn            = "arn:aws:iam::118273046134:role/ecsTaskExecutionRole1"
-  cpu                      = "1024"  # Updated to 1 vCPU
-  memory                   = "2048"  # Updated to 2GB
+  cpu                      = "1024"  # 1 vCPU
+  memory                   = "2048"  # 2GB
 
   container_definitions = jsonencode([{
-    name         = "strapi-container",
-    image        = var.image_uri,
-    cpu          = 1024,
-    memory       = 2048,
-    essential    = true,
- portMappings = [{
-    containerPort = 1337
-    hostPort      = 1337
-  }]
+    name         = "strapi-container"
+    image        = var.image_uri
+    cpu          = 1024
+    memory       = 2048
+    essential    = true
+    portMappings = [{
+      containerPort = 1337
+      hostPort      = 1337
+    }]
 
-  environment = [
+    environment = [
       {
         name  = "APP_KEYS"
-        value = var.app_keys  # Using the sensitive variable
+        value = var.app_keys  # Sensitive variable
       },
       {
         name  = "API_TOKEN_SALT"
@@ -132,12 +132,13 @@ resource "aws_ecs_task_definition" "strapi_task" {
         name  = "DATABASE_FILENAME"
         value = ".tmp/data.db"
       }
-    ],
+    ]
+
     logConfiguration = {
       logDriver = "awslogs"
       options = {
         awslogs-group         = "/ecs/strapi"
-        awslogs-region        = var.region  # Using the variable here
+        awslogs-region        = var.region  # Region variable used
         awslogs-stream-prefix = "ecs"
       }
     }
@@ -162,7 +163,7 @@ resource "aws_lb" "strapi_alb" {
 # Target Group
 resource "aws_lb_target_group" "strapi_tg" {
   name        = "gbkhtg-strapi-tg"
-  port        = 1337  # Match Strapi port
+  port        = 1337  # Strapi port
   protocol    = "HTTP"
   vpc_id      = aws_vpc.main.id
   target_type = "ip"
@@ -195,7 +196,7 @@ resource "aws_ecs_service" "strapi_service" {
   load_balancer {
     target_group_arn = aws_lb_target_group.strapi_tg.arn
     container_name   = "strapi-container"
-    container_port   = 1337  # Correct port
+    container_port   = 1337
   }
 
   depends_on = [aws_lb_listener.strapi_listener]
