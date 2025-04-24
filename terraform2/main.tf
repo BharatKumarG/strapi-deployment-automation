@@ -118,38 +118,18 @@ resource "aws_ecs_task_definition" "strapi_task" {
   }]
 
   environment = [
-    {
-      name  = "APP_KEYS"
-      value = var.app_keys
-    },
-      {
-        name  = "API_TOKEN_SALT"
-        value = var.api_token_salt
-      },
-      {
-        name  = "ADMIN_JWT_SECRET"
-        value = var.admin_jwt_secret
-      },
-      {
-        name  = "TRANSFER_TOKEN_SALT"
-        value = var.transfer_token_salt
-      },
-      {
-        name  = "JWT_SECRET"
-        value = var.jwt_secret
-      },
-      {
-        name  = "DATABASE_CLIENT"
-        value = "sqlite"
-      },
-      {
-        name  = "DATABASE_FILENAME"
-        value = ".tmp/data.db"
-      }
-    ]
-    logConfiguration = {
+    { name = "APP_KEYS", value = var.app_keys },
+    { name = "API_TOKEN_SALT", value = var.api_token_salt },
+    { name = "ADMIN_JWT_SECRET", value = var.admin_jwt_secret },
+    { name = "TRANSFER_TOKEN_SALT", value = var.transfer_token_salt },
+    { name = "JWT_SECRET", value = var.jwt_secret },
+    { name = "DATABASE_CLIENT", value = "sqlite" },
+    { name = "DATABASE_FILENAME", value = ".tmp/data.db" }
+  ]
+
+  logConfiguration = {
     logDriver = "awslogs"
-    options = {
+    options   = {
       awslogs-group         = "/ecs/strapi"
       awslogs-region        = var.region
       awslogs-stream-prefix = "ecs"
