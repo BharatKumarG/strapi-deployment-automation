@@ -107,21 +107,21 @@ resource "aws_ecs_task_definition" "strapi_task" {
   memory                   = "2048"
 
   container_definitions = jsonencode([{
-    name         = "strapi-container"
-    image        = var.image_uri  # Uses variable
-    cpu          = 1024
-    memory       = 2048
-    essential    = true
-    portMappings = [{
-      containerPort = 1337
-      hostPort      = 1337
-    }]
+  name         = "strapi-container"
+  image        = var.image_uri
+  cpu          = 1024
+  memory       = 2048
+  essential    = true
+  portMappings = [{
+    containerPort = 1337
+    hostPort      = 1337
+  }]
 
-    environment = [
-      {
-        name  = "APP_KEYS"
-        value = var.app_keys
-      },
+  environment = [
+    {
+      name  = "APP_KEYS"
+      value = var.app_keys
+    },
       {
         name  = "API_TOKEN_SALT"
         value = var.api_token_salt
@@ -147,16 +147,15 @@ resource "aws_ecs_task_definition" "strapi_task" {
         value = ".tmp/data.db"
       }
     ]
-
     logConfiguration = {
-      logDriver = "awslogs"
-      options = {
-        awslogs-group         = "/ecs/strapi"
-        awslogs-region        = var.region
-        awslogs-stream-prefix = "ecs"
-      }
+    logDriver = "awslogs"
+    options = {
+      awslogs-group         = "/ecs/strapi"
+      awslogs-region        = var.region
+      awslogs-stream-prefix = "ecs"
     }
-  }])
+  }
+}])
 }
 
 # Random ID for Load Balancer Name
