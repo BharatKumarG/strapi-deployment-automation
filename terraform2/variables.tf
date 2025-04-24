@@ -8,11 +8,6 @@ variable "image_uri" {
   description = "URI of the Docker image in ECR"
 }
 
-variable "region" {
-  type        = string
-  description = "AWS region for deployment"
-}
-
 variable "app_keys" {
   type        = string
   description = "Application keys for Strapi"
