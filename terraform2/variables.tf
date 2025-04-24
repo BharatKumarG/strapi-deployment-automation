@@ -1,6 +1,11 @@
-variable "existing_vpc_id" {
-  description = "ID of the existing VPC"
-  default     = "vpc-0d255f5b20be72ef6"
+variable "region" {
+  type        = string
+  description = "AWS region"
+}
+
+variable "image_uri" {
+  type        = string
+  description = "ECR image URI"
 }
 
 variable "app_keys" {
