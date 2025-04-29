@@ -199,25 +199,6 @@ resource "aws_ecs_service" "strapi" {
 }
 
 # Database Resources
-resource "aws_db_instance" "strapi_db" {
-  allocated_storage      = 20
-  engine                 = "postgres"
-  engine_version         = "13.7"
-  instance_class         = "db.t3.micro"
-  db_name                = "strapi"
-  username               = "strapi"
-  password               = random_password.db_password.result
-  skip_final_snapshot    = true
-  vpc_security_group_ids = [aws_security_group.ecs_sg.id]
-  db_subnet_group_name   = aws_db_subnet_group.default.name
-}
-
-resource "aws_db_subnet_group" "default" {
-  name       = "main"
-  subnet_ids = [aws_subnet.public_a.id, aws_subnet.public_b.id]
-  tags = { Name = "My DB subnet group" }
-}
-
 resource "random_password" "db_password" {
   length  = 16
   special = false
