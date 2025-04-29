@@ -1,24 +1,39 @@
-# ✅ Base image
-FROM node:18-alpine
-
-# ✅ Set working directory
+# Dockerfile
+# Stage 1 - Build with necessary tools
+FROM node:20-alpine AS builder
 WORKDIR /app
 
-# ✅ Copy package.json and package-lock.json (if available) to install dependencies
-COPY package*.json ./
+# Install build dependencies
+RUN apk add --no-cache python3 make g++
 
-# ✅ Install dependencies (production only for production environment)
+# Copy package files first
+COPY package*..json ./
+COPY tsconfig.json ./
+
+# Install dependencies
 RUN npm install --production
 
-# ✅ Copy the rest of the app (excluding files in .dockerignore)
+# Copy source files
 COPY . .
 
-# ✅ Expose Strapi port
-EXPOSE 1337
-
-# ✅ Build the app (optional: use if you're customizing admin panel)
+# Build project
 RUN npm run build
 
-# ✅ Run Strapi in production mode (for production environment)
-CMD ["npm", "run", "start"]
+# Stage 2 - Minimal production image
+FROM node:20-alpine
+WORKDIR /app
 
+# Copy production files
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/config ./config
+COPY --from=builder /app/public ./public
+
+# Install runtime dependencies
+RUN apk add --no-cache sqlite && \
+    mkdir -p /app/.tmp && \
+    chown -R node:node /app
+
+USER node
+EXPOSE 1337
+CMD ["npm", "start"]
