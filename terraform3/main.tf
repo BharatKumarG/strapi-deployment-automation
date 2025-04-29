@@ -77,6 +77,13 @@ resource "aws_security_group" "strapi_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  ingress {
+    from_port   = 1337
+    to_port     = 1337
+    protocol    = "tcp"
+    security_groups = [aws_security_group.strapi_sg.id]  # Restrict to ALB
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -99,18 +106,18 @@ resource "aws_lb" "strapi" {
 
 resource "aws_lb_target_group" "strapi" {
   name        = "strapi-tg"
-  port        = 80
+  port        = 1337  # Corrected port
   protocol    = "HTTP"
-  target_type = "ip"  # This is the critical fix
+  target_type = "ip"
   vpc_id      = aws_vpc.main.id
 
   health_check {
-    path                = "/"
-    interval            = 30
-    timeout             = 5
-    healthy_threshold   = 2
-    unhealthy_threshold = 2
-    matcher             = "200"
+    path                = "/_health"  # Strapi health endpoint
+    interval            = 60
+    timeout             = 10
+    healthy_threshold   = 3
+    unhealthy_threshold = 3
+    matcher             = "200-399"
   }
 }
 
@@ -137,30 +144,58 @@ resource "aws_ecs_task_definition" "strapi" {
   family                   = "strapi-task"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  cpu                      = "1024"
-  memory                   = "512"
+  cpu                      = "1024"  # Increased for production
+  memory                   = "2048"   # Increased for production
   execution_role_arn       = "arn:aws:iam::118273046134:role/ecsTaskExecutionRole1"
-  container_definitions = jsonencode([
-    {
-      name      = "strapi"
-      image     = "strapi/strapi"
-      essential = true
-      portMappings = [
-        {
-          containerPort = 80
-          hostPort      = 80
-        }
-      ],
-      logConfiguration = {
-        logDriver = "awslogs"
-        options = {
-          awslogs-group         = aws_cloudwatch_log_group.strapi.name
-          awslogs-region        = "us-east-1"
-          awslogs-stream-prefix = "ecs"
-        }
+  task_role_arn            = "arn:aws:iam::118273046134:role/ecsTaskExecutionRole1"
+  
+  container_definitions = jsonencode([{
+    name      = "strapi"
+    image     = "strapi/strapi:4.11.3"  # Specific version
+    essential = true
+    portMappings = [{
+      containerPort = 1337
+      hostPort      = 1337
+    }]
+    environment = [
+      {
+        name  = "NODE_ENV",
+        value = "production"
+      },
+      {
+        name  = "DATABASE_CLIENT",
+        value = "postgres"
+      },
+      {
+        name  = "DATABASE_HOST",
+        value = aws_db_instance.strapi_db.address
+      },
+      {
+        name  = "DATABASE_PORT",
+        value = "5432"
+      },
+      {
+        name  = "DATABASE_NAME",
+        value = "strapi"
+      },
+      {
+        name  = "DATABASE_USERNAME",
+        value = "strapi"
+      },
+      {
+        name  = "DATABASE_PASSWORD",
+        value = aws_secretsmanager_secret_version.db_password.secret_string
+      }
+    ]
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        awslogs-group         = aws_cloudwatch_log_group.strapi.name
+        awslogs-region        = "us-east-1"
+        awslogs-stream-prefix = "ecs"
       }
     }
-  ])
+  }])
 }
 
 resource "aws_ecs_service" "strapi" {
@@ -179,10 +214,36 @@ resource "aws_ecs_service" "strapi" {
   load_balancer {
     target_group_arn = aws_lb_target_group.strapi.arn
     container_name   = "strapi"
-    container_port   = 80
+    container_port   = 1337  # Corrected port
   }
 
   depends_on = [aws_lb_listener.front_end]
+}
+
+# Add database resources
+resource "aws_db_instance" "strapi_db" {
+  allocated_storage    = 20
+  engine               = "postgres"
+  instance_class       = "db.t3.micro"
+  db_name              = "strapi"
+  username             = "strapi"
+  password             = random_password.db_password.result
+  skip_final_snapshot  = true
+  vpc_security_group_ids = [aws_security_group.strapi_sg.id]
+}
+
+resource "random_password" "db_password" {
+  length  = 16
+  special = false
+}
+
+resource "aws_secretsmanager_secret" "db_credentials" {
+  name = "strapi-db-credentials"
+}
+
+resource "aws_secretsmanager_secret_version" "db_password" {
+  secret_id = aws_secretsmanager_secret.db_credentials.id
+  secret_string = random_password.db_password.result
 }
 
 output "strapi_lb_dns" {
