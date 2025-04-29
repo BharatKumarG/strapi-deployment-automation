@@ -3,7 +3,7 @@ FROM node:14-alpine AS builder
 WORKDIR /app
 
 # Install build dependencies
-RUN apk add --no-cache python3 make g++ 
+RUN apk add --no-cache python3 make g++
 
 # Copy package files first
 COPY package*..json ./
@@ -27,6 +27,9 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/config ./config
 COPY --from=builder /app/public ./public
+
+# ✅ Minimal required change: expose to ECS
+ENV HOST=0.0.0.0
 
 # Install runtime dependencies
 RUN apk add --no-cache sqlite && \
