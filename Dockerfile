@@ -1,10 +1,9 @@
-# Dockerfile
 # Stage 1 - Build with necessary tools
-FROM node:20-alpine AS builder
+FROM node:14-alpine AS builder
 WORKDIR /app
 
 # Install build dependencies
-RUN apk add --no-cache python3 make g++
+RUN apk add --no-cache python3 make g++ 
 
 # Copy package files first
 COPY package*..json ./
@@ -20,7 +19,7 @@ COPY . .
 RUN npm run build
 
 # Stage 2 - Minimal production image
-FROM node:20-alpine
+FROM node:14-alpine
 WORKDIR /app
 
 # Copy production files
