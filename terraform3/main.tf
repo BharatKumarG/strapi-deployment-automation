@@ -186,7 +186,7 @@ resource "aws_ecs_service" "strapi" {
   load_balancer {
     target_group_arn = aws_lb_target_group.strapi.arn
     container_name   = "strapi"
-    container_port   = 80
+    container_port   = 1337
   }
 
   depends_on = [aws_lb_listener.front_end]
