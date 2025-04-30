@@ -2,7 +2,6 @@ provider "aws" {
   region = "us-east-1"
 }
 
-# VPC Configuration (unchanged)
 resource "aws_vpc" "main" {
   cidr_block           = "10.0.0.0/16"
   enable_dns_support   = true
@@ -10,12 +9,6 @@ resource "aws_vpc" "main" {
   tags = { Name = "strapi-vpc" }
 }
 
-resource "aws_internet_gateway" "gw" {
-  vpc_id = aws_vpc.main.id
-  tags = { Name = "strapi-gw" }
-}
-
-# Subnets (unchanged)
 resource "aws_subnet" "public_a" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = "10.0.1.0/24"
@@ -32,7 +25,11 @@ resource "aws_subnet" "public_b" {
   tags = { Name = "public-subnet-b" }
 }
 
-# Networking (unchanged)
+resource "aws_internet_gateway" "gw" {
+  vpc_id = aws_vpc.main.id
+  tags   = { Name = "strapi-gw" }
+}
+
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
   route {
@@ -52,22 +49,14 @@ resource "aws_route_table_association" "b" {
   route_table_id = aws_route_table.public.id
 }
 
-# Security Group (unchanged)
 resource "aws_security_group" "strapi_sg" {
   name        = "strapi-sg"
-  description = "Allow HTTP and ECS traffic"
+  description = "Allow HTTP traffic"
   vpc_id      = aws_vpc.main.id
 
   ingress {
     from_port   = 80
     to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port   = 1337
-    to_port     = 1337
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -80,36 +69,88 @@ resource "aws_security_group" "strapi_sg" {
   }
 }
 
-# Load Balancer (critical fix)
+resource "aws_ecs_cluster" "strapi" {
+  name = "strapi-cluster"
+}
+
+resource "aws_iam_role" "ecs_task_execution_role" {
+  name = "ecsTaskExecutionRole"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect    = "Allow",
+      Principal = { Service = "ecs-tasks.amazonaws.com" },
+      Action    = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
+  role       = aws_iam_role.ecs_task_execution_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+}
+
+resource "aws_cloudwatch_log_group" "strapi" {
+  name = "/ecs/strapi"
+}
+
+resource "aws_ecs_task_definition" "strapi" {
+  family                   = "strapi-task"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = "256"
+  memory                   = "512"
+  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
+
+  container_definitions = jsonencode([{
+    name      = "strapi",
+    image     = "gudurubharatkumar/strapi-image:latest",
+    essential = true,
+    portMappings = [{
+      containerPort = 80,  # Changed to 80
+      hostPort      = 80,   # Must match containerPort
+      protocol      = "tcp"
+    }],
+    logConfiguration = {
+      logDriver = "awslogs",
+      options = {
+        awslogs-group         = "/ecs/strapi",
+        awslogs-region        = "us-east-1",
+        awslogs-stream-prefix = "ecs"
+      }
+    }
+  }])
+}
+
 resource "aws_lb" "strapi" {
   name               = "strapi-lb"
   internal           = false
   load_balancer_type = "application"
-  security_groups    = [aws_security_group.strapi_sg.id]
   subnets            = [aws_subnet.public_a.id, aws_subnet.public_b.id]
-  tags = { Name = "strapi-alb" }
+  security_groups    = [aws_security_group.strapi_sg.id]
 }
 
 resource "aws_lb_target_group" "strapi" {
   name        = "strapi-tg"
-  port        = 1337  # Must match container port
+  port        = 80  # Changed to 80
   protocol    = "HTTP"
-  target_type = "ip"
   vpc_id      = aws_vpc.main.id
+  target_type = "ip"
 
   health_check {
     path                = "/"
+    protocol            = "HTTP"
+    port                = "traffic-port"
     interval            = 30
     timeout             = 5
-    healthy_threshold   = 2
+    healthy_threshold   = 5
     unhealthy_threshold = 2
-    matcher             = "200"
   }
 }
 
 resource "aws_lb_listener" "front_end" {
   load_balancer_arn = aws_lb.strapi.arn
-  port              = "80"
+  port              = 80
   protocol          = "HTTP"
 
   default_action {
@@ -118,56 +159,12 @@ resource "aws_lb_listener" "front_end" {
   }
 }
 
-# ECS Cluster (unchanged)
-resource "aws_ecs_cluster" "strapi" {
-  name = "strapi-cluster"
-}
-
-resource "aws_cloudwatch_log_group" "strapi" {
-  name = "/ecs/strapi"
-}
-
-# Task Definition (critical fix)
-resource "aws_ecs_task_definition" "strapi" {
-  family                   = "strapi-task"
-  network_mode             = "awsvpc"
-  requires_compatibilities = ["FARGATE"]
-  cpu                      = "1024"
-  memory                   = "2048"
-  execution_role_arn       = "arn:aws:iam::118273046134:role/ecsTaskExecutionRole1"
-  
-  container_definitions = jsonencode([{
-    name      = "strapi"
-    image     = "118273046134.dkr.ecr.us-east-1.amazonaws.com/gbk-strapi-app:latest"
-    essential = true
-    portMappings = [{
-      containerPort = 1337
-      hostPort      = 1337  # Must match target group
-      protocol      = "tcp"
-    }]
-    logConfiguration = {
-      logDriver = "awslogs"
-      options = {
-        awslogs-group         = aws_cloudwatch_log_group.strapi.name
-        awslogs-region        = "us-east-1"
-        awslogs-stream-prefix = "ecs"
-      }
-    }
-  }])
-}
-
-# ECS Service with Fargate Spot (critical fix)
 resource "aws_ecs_service" "strapi" {
   name            = "strapi-service"
   cluster         = aws_ecs_cluster.strapi.id
   task_definition = aws_ecs_task_definition.strapi.arn
   desired_count   = 1
-
-  # Fargate Spot configuration
-  capacity_provider_strategy {
-    capacity_provider = "FARGATE_SPOT"
-    weight            = 100
-  }
+  launch_type     = "FARGATE"
 
   network_configuration {
     subnets          = [aws_subnet.public_a.id, aws_subnet.public_b.id]
@@ -178,12 +175,8 @@ resource "aws_ecs_service" "strapi" {
   load_balancer {
     target_group_arn = aws_lb_target_group.strapi.arn
     container_name   = "strapi"
-    container_port   = 1337  # Must match target group
+    container_port   = 80  # Changed to 80
   }
 
   depends_on = [aws_lb_listener.front_end]
-}
-
-output "strapi_lb_dns" {
-  value = aws_lb.strapi.dns_name
 }
