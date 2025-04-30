@@ -148,27 +148,24 @@ resource "aws_ecs_task_definition" "strapi" {
   memory                   = "1024"
   execution_role_arn       = aws_iam_role.ecs_task_execution.arn
 
-  container_definitions = jsonencode([
-    {
-      name      = "strapi"
-      image     = "strapi/strapi"
-      essential = true
-      portMappings = [
-        {
-          containerPort = 1337
-          protocol      = "tcp"
-        }
-      ]
-      logConfiguration = {
-        logDriver = "awslogs"
-        options = {
-          awslogs-group         = "/ecs/strapi"
-          awslogs-region        = "us-east-1"
-          awslogs-stream-prefix = "ecs"
-        }
+  container_definitions = jsonencode([{
+    name      = "strapi"
+    image     = "strapi/strapi"
+    essential = true
+    portMappings = [{
+      containerPort = 1337
+      hostPort      = 1337  # Critical fix added here
+      protocol      = "tcp"
+    }]
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        awslogs-group         = "/ecs/strapi"
+        awslogs-region        = "us-east-1"
+        awslogs-stream-prefix = "ecs"
       }
     }
-  ])
+  }])
 }
 
 resource "aws_iam_role" "ecs_task_execution" {
@@ -176,16 +173,11 @@ resource "aws_iam_role" "ecs_task_execution" {
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
-    Statement = [
-      {
-        Action    = "sts:AssumeRole",
-        Principal = {
-          Service = "ecs-tasks.amazonaws.com"
-        },
-        Effect = "Allow",
-        Sid    = ""
-      }
-    ]
+    Statement = [{
+      Action    = "sts:AssumeRole",
+      Effect    = "Allow",
+      Principal = { Service = "ecs-tasks.amazonaws.com" }
+    }]
   })
 }
 
@@ -198,6 +190,7 @@ resource "aws_ecs_service" "strapi" {
   name            = "strapi-service"
   cluster         = aws_ecs_cluster.strapi.id
   task_definition = aws_ecs_task_definition.strapi.arn
+  
   capacity_provider_strategy {
     capacity_provider = "FARGATE_SPOT"
     weight            = 100
