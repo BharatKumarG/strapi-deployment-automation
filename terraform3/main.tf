@@ -123,7 +123,7 @@ resource "aws_lb_target_group" "strapi" {
 
 resource "aws_lb_listener" "front_end" {
   load_balancer_arn = aws_lb.strapi.arn
-  port              = "1337"  # Changed from 80 to 1337 to match container port
+  port              = "1337"
   protocol          = "HTTP"
 
   default_action {
@@ -198,7 +198,10 @@ resource "aws_ecs_service" "strapi" {
   name            = "strapi-service"
   cluster         = aws_ecs_cluster.strapi.id
   task_definition = aws_ecs_task_definition.strapi.arn
-  launch_type     = "FARGATE"
+  capacity_provider_strategy {
+    capacity_provider = "FARGATE_SPOT"
+    weight            = 100
+  }
 
   network_configuration {
     subnets          = [aws_subnet.public_a.id, aws_subnet.public_b.id]
