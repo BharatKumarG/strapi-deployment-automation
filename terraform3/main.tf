@@ -2,6 +2,10 @@ provider "aws" {
   region = "us-east-1"
 }
 
+####################
+# Networking Layer #
+####################
+
 # VPC
 resource "aws_vpc" "main" {
   cidr_block           = "10.0.0.0/16"
@@ -22,7 +26,7 @@ resource "aws_internet_gateway" "gw" {
   }
 }
 
-# Subnets
+# Public Subnets
 resource "aws_subnet" "public_a" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = "10.0.1.0/24"
@@ -30,7 +34,7 @@ resource "aws_subnet" "public_a" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name = "public-subnet-a"
+    Name = "strapi-public-a"
   }
 }
 
@@ -41,11 +45,11 @@ resource "aws_subnet" "public_b" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name = "public-subnet-b"
+    Name = "strapi-public-b"
   }
 }
 
-# Route Table and Associations
+# Route Table
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
 
@@ -55,10 +59,11 @@ resource "aws_route_table" "public" {
   }
 
   tags = {
-    Name = "public-rt"
+    Name = "strapi-public-rt"
   }
 }
 
+# Route Table Associations
 resource "aws_route_table_association" "a" {
   subnet_id      = aws_subnet.public_a.id
   route_table_id = aws_route_table.public.id
@@ -69,13 +74,18 @@ resource "aws_route_table_association" "b" {
   route_table_id = aws_route_table.public.id
 }
 
-# Security Group
+#######################
+# Security Components #
+#######################
+
+# Security Group for Strapi
 resource "aws_security_group" "strapi_sg" {
   name        = "strapi-sg"
-  description = "Allow HTTP and Strapi ports"
+  description = "Allow inbound traffic for HTTP and Strapi"
   vpc_id      = aws_vpc.main.id
 
   ingress {
+    description = "HTTP"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
@@ -83,6 +93,7 @@ resource "aws_security_group" "strapi_sg" {
   }
 
   ingress {
+    description = "Strapi (port 1337)"
     from_port   = 1337
     to_port     = 1337
     protocol    = "tcp"
@@ -101,9 +112,13 @@ resource "aws_security_group" "strapi_sg" {
   }
 }
 
-# Load Balancer
+########################
+# Load Balancer Layer  #
+########################
+
+# Application Load Balancer
 resource "aws_lb" "strapi" {
-  name               = "strapi-lb"
+  name               = "strapi-alb"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.strapi_sg.id]
@@ -147,6 +162,10 @@ resource "aws_lb_listener" "front_end" {
     target_group_arn = aws_lb_target_group.strapi.arn
   }
 }
+
+########################
+# ECS Configuration    #
+########################
 
 # ECS Cluster
 resource "aws_ecs_cluster" "strapi" {
@@ -216,8 +235,11 @@ resource "aws_ecs_service" "strapi" {
   depends_on = [aws_lb_listener.front_end]
 }
 
-# Output
+########################
+# Outputs              #
+########################
+
 output "strapi_lb_dns" {
-  value = aws_lb.strapi.dns_name
+  value       = aws_lb.strapi.dns_name
   description = "The DNS name of the Strapi Application Load Balancer"
 }
