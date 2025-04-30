@@ -13,6 +13,8 @@ services:
       DATABASE_PASSWORD: strapi
     depends_on:
       - postgres
+    volumes:
+      - ./app:/app  # Optional: persist uploads or dev code
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:1337/_health || exit 1"]
       interval: 30s
@@ -26,3 +28,8 @@ services:
       POSTGRES_USER: strapi
       POSTGRES_PASSWORD: strapi
       POSTGRES_DB: strapi
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
