@@ -2,6 +2,7 @@ provider "aws" {
   region = "us-east-1"
 }
 
+# VPC
 resource "aws_vpc" "main" {
   cidr_block           = "10.0.0.0/16"
   enable_dns_support   = true
@@ -12,6 +13,7 @@ resource "aws_vpc" "main" {
   }
 }
 
+# Internet Gateway
 resource "aws_internet_gateway" "gw" {
   vpc_id = aws_vpc.main.id
 
@@ -20,6 +22,7 @@ resource "aws_internet_gateway" "gw" {
   }
 }
 
+# Subnets
 resource "aws_subnet" "public_a" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = "10.0.1.0/24"
@@ -42,6 +45,7 @@ resource "aws_subnet" "public_b" {
   }
 }
 
+# Route Table and Associations
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
 
@@ -65,9 +69,10 @@ resource "aws_route_table_association" "b" {
   route_table_id = aws_route_table.public.id
 }
 
+# Security Group
 resource "aws_security_group" "strapi_sg" {
   name        = "strapi-sg"
-  description = "Allow HTTP and ECS traffic"
+  description = "Allow HTTP and Strapi ports"
   vpc_id      = aws_vpc.main.id
 
   ingress {
@@ -90,8 +95,13 @@ resource "aws_security_group" "strapi_sg" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  tags = {
+    Name = "strapi-sg"
+  }
 }
 
+# Load Balancer
 resource "aws_lb" "strapi" {
   name               = "strapi-lb"
   internal           = false
@@ -104,9 +114,10 @@ resource "aws_lb" "strapi" {
   }
 }
 
+# Target Group
 resource "aws_lb_target_group" "strapi" {
   name        = "strapi-tg"
-  port        = 1337  # Changed to match container port
+  port        = 1337
   protocol    = "HTTP"
   target_type = "ip"
   vpc_id      = aws_vpc.main.id
@@ -119,11 +130,16 @@ resource "aws_lb_target_group" "strapi" {
     unhealthy_threshold = 2
     matcher             = "200"
   }
+
+  tags = {
+    Name = "strapi-tg"
+  }
 }
 
+# Listener
 resource "aws_lb_listener" "front_end" {
   load_balancer_arn = aws_lb.strapi.arn
-  port              = "80"
+  port              = 80
   protocol          = "HTTP"
 
   default_action {
@@ -132,14 +148,18 @@ resource "aws_lb_listener" "front_end" {
   }
 }
 
+# ECS Cluster
 resource "aws_ecs_cluster" "strapi" {
   name = "strapi-cluster"
 }
 
+# CloudWatch Log Group
 resource "aws_cloudwatch_log_group" "strapi" {
-  name = "/ecs/strapi"
+  name              = "/ecs/strapi"
+  retention_in_days = 7
 }
 
+# ECS Task Definition
 resource "aws_ecs_task_definition" "strapi" {
   family                   = "strapi-task"
   network_mode             = "awsvpc"
@@ -147,38 +167,35 @@ resource "aws_ecs_task_definition" "strapi" {
   cpu                      = "1024"
   memory                   = "2048"
   execution_role_arn       = "arn:aws:iam::118273046134:role/ecsTaskExecutionRole1"
-  
-  container_definitions = jsonencode([
-    {
-      name      = "strapi"
-      image     = "118273046134.dkr.ecr.us-east-1.amazonaws.com/gbk-strapi-app:latest"
-      essential = true
-      portMappings = [
-        {
-          containerPort = 1337
-          hostPort      = 1337  # Required for Fargate
-          protocol      = "tcp"
-        }
-      ],
-      logConfiguration = {
-        logDriver = "awslogs"
-        options = {
-          awslogs-group         = aws_cloudwatch_log_group.strapi.name
-          awslogs-region        = "us-east-1"
-          awslogs-stream-prefix = "ecs"
-        }
+
+  container_definitions = jsonencode([{
+    name      = "strapi"
+    image     = "118273046134.dkr.ecr.us-east-1.amazonaws.com/gbk-strapi-app:latest"
+    essential = true
+    portMappings = [{
+      containerPort = 1337
+      hostPort      = 1337
+      protocol      = "tcp"
+    }]
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        awslogs-group         = aws_cloudwatch_log_group.strapi.name
+        awslogs-region        = "us-east-1"
+        awslogs-stream-prefix = "ecs"
       }
     }
-  ])
+  }])
 }
 
+# ECS Service
 resource "aws_ecs_service" "strapi" {
   name            = "strapi-service"
   cluster         = aws_ecs_cluster.strapi.id
   task_definition = aws_ecs_task_definition.strapi.arn
   desired_count   = 1
+  launch_type     = "FARGATE"
 
-  # Fargate Spot configuration
   capacity_provider_strategy {
     capacity_provider = "FARGATE_SPOT"
     weight            = 100
@@ -199,6 +216,8 @@ resource "aws_ecs_service" "strapi" {
   depends_on = [aws_lb_listener.front_end]
 }
 
+# Output
 output "strapi_lb_dns" {
   value = aws_lb.strapi.dns_name
+  description = "The DNS name of the Strapi Application Load Balancer"
 }
