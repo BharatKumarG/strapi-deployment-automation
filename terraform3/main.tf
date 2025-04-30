@@ -177,6 +177,16 @@ resource "aws_ecs_service" "strapi" {
   launch_type     = "FARGATE"
   desired_count   = 1
 
+  capacity_provider_strategy {
+    capacity_provider = "FARGATE_SPOT"
+    weight            = 1
+  }
+
+  capacity_provider_strategy {
+    capacity_provider = "FARGATE"
+    weight            = 0
+  }
+
   network_configuration {
     subnets          = [aws_subnet.public_a.id, aws_subnet.public_b.id]
     assign_public_ip = true
