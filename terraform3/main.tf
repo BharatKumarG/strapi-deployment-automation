@@ -123,7 +123,7 @@ resource "aws_lb_target_group" "strapi" {
 
 resource "aws_lb_listener" "front_end" {
   load_balancer_arn = aws_lb.strapi.arn
-  port              = "80"
+  port              = "1337"  # Changed from 80 to 1337 to match container port
   protocol          = "HTTP"
 
   default_action {
@@ -201,8 +201,8 @@ resource "aws_ecs_service" "strapi" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets         = [aws_subnet.public_a.id, aws_subnet.public_b.id]
-    security_groups = [aws_security_group.strapi_sg.id]
+    subnets          = [aws_subnet.public_a.id, aws_subnet.public_b.id]
+    security_groups  = [aws_security_group.strapi_sg.id]
     assign_public_ip = true
   }
 
