@@ -106,7 +106,7 @@ resource "aws_lb" "strapi" {
 
 resource "aws_lb_target_group" "strapi" {
   name        = "strapi-tg"
-  port        = 1337                       # FIXED from 80 to 1337
+  port        = 1337
   protocol    = "HTTP"
   target_type = "ip"
   vpc_id      = aws_vpc.main.id
@@ -142,26 +142,27 @@ resource "aws_cloudwatch_log_group" "strapi" {
 
 resource "aws_ecs_task_definition" "strapi" {
   family                   = "strapi-task"
-  network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  cpu                      = "1024"
-  memory                   = "2048"
-  execution_role_arn       = "arn:aws:iam::118273046134:role/ecsTaskExecutionRole1"
+  network_mode             = "awsvpc"
+  cpu                      = "512"
+  memory                   = "1024"
+  execution_role_arn       = aws_iam_role.ecs_task_execution.arn
+
   container_definitions = jsonencode([
     {
       name      = "strapi"
-      image     = "118273046134.dkr.ecr.us-east-1.amazonaws.com/gbk-strapi-app:latest"
+      image     = "strapi/strapi"
       essential = true
       portMappings = [
         {
           containerPort = 1337
-          hostPort      = 1337
+          protocol      = "tcp"
         }
-      ],
+      ]
       logConfiguration = {
         logDriver = "awslogs"
         options = {
-          awslogs-group         = aws_cloudwatch_log_group.strapi.name
+          awslogs-group         = "/ecs/strapi"
           awslogs-region        = "us-east-1"
           awslogs-stream-prefix = "ecs"
         }
@@ -170,27 +171,39 @@ resource "aws_ecs_task_definition" "strapi" {
   ])
 }
 
+resource "aws_iam_role" "ecs_task_execution" {
+  name = "ecsTaskExecutionRole"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Action    = "sts:AssumeRole",
+        Principal = {
+          Service = "ecs-tasks.amazonaws.com"
+        },
+        Effect = "Allow",
+        Sid    = ""
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_task_execution_policy" {
+  role       = aws_iam_role.ecs_task_execution.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+}
+
 resource "aws_ecs_service" "strapi" {
   name            = "strapi-service"
   cluster         = aws_ecs_cluster.strapi.id
   task_definition = aws_ecs_task_definition.strapi.arn
   launch_type     = "FARGATE"
-  desired_count   = 1
-
-  capacity_provider_strategy {
-    capacity_provider = "FARGATE_SPOT"
-    weight            = 1
-  }
-
-  capacity_provider_strategy {
-    capacity_provider = "FARGATE"
-    weight            = 0
-  }
 
   network_configuration {
-    subnets          = [aws_subnet.public_a.id, aws_subnet.public_b.id]
+    subnets         = [aws_subnet.public_a.id, aws_subnet.public_b.id]
+    security_groups = [aws_security_group.strapi_sg.id]
     assign_public_ip = true
-    security_groups  = [aws_security_group.strapi_sg.id]
   }
 
   load_balancer {
@@ -199,9 +212,6 @@ resource "aws_ecs_service" "strapi" {
     container_port   = 1337
   }
 
-  depends_on = [aws_lb_listener.front_end]
-}
-
-output "strapi_lb_dns" {
-  value = aws_lb.strapi.dns_name
+  desired_count = 1
+  depends_on    = [aws_lb_listener.front_end]
 }
