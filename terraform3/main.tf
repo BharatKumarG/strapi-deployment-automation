@@ -106,9 +106,9 @@ resource "aws_lb" "strapi" {
 
 resource "aws_lb_target_group" "strapi" {
   name        = "strapi-tg"
-  port        = 80
+  port        = 1337                       # FIXED from 80 to 1337
   protocol    = "HTTP"
-  target_type = "ip"  # This is the critical fix
+  target_type = "ip"
   vpc_id      = aws_vpc.main.id
 
   health_check {
