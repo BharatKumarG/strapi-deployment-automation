@@ -235,3 +235,21 @@ https://www.loom.com/share/03a71453854246c19c6642ac508dff35?sid=f1cb0e97-546e-4e
 🔐 Ensuring IAM permissions were properly set to allow CloudWatch to access and monitor logs
 🎯 Fine-tuning alarm thresholds to avoid false positives while still ensuring effective monitoring
 ⏳ Handling initial issues with log stream availability due to delayed ingestion in CloudWatch
+
+
+## Task 8 Completion Status
+
+Hi Team,
+I have successfully completed Task-8: Hosting and Publishing the Strapi Application.
+As part of this task, I have:
+# ✅ Created content types (collections and singles) in Strapi.
+# ✅ Configured roles and permissions to allow public access where needed.
+# ✅ Used the Users & Permissions Plugin to configure access settings.
+# ✅ Published the content and tested it using the public API URL.
+🔗 GitHub Repository:  https://github.com/BharatKumarG/strapi-deployment-automation
+
+📽️ Loom Video: [Task_8.mp4](https://1drv.ms/v/s!Ar63PuiQcixJcRBsNLF_D86O4BE?e=FO9qm9)
+Looking forward to your valuable feedback!
+Best regards,
+Guduru Bharat Kumar.
+
