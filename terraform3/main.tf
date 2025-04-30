@@ -106,7 +106,7 @@ resource "aws_lb" "strapi" {
 
 resource "aws_lb_target_group" "strapi" {
   name        = "strapi-tg"
-  port        = 1337
+  port        = 1337  # Changed to match container port
   protocol    = "HTTP"
   target_type = "ip"
   vpc_id      = aws_vpc.main.id
@@ -142,55 +142,43 @@ resource "aws_cloudwatch_log_group" "strapi" {
 
 resource "aws_ecs_task_definition" "strapi" {
   family                   = "strapi-task"
-  requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
-  cpu                      = "512"
-  memory                   = "1024"
-  execution_role_arn       = aws_iam_role.ecs_task_execution.arn
-
-  container_definitions = jsonencode([{
-    name      = "strapi"
-    image     = "strapi/strapi"
-    essential = true
-    portMappings = [{
-      containerPort = 1337
-      hostPort      = 1337  # Critical fix added here
-      protocol      = "tcp"
-    }]
-    logConfiguration = {
-      logDriver = "awslogs"
-      options = {
-        awslogs-group         = "/ecs/strapi"
-        awslogs-region        = "us-east-1"
-        awslogs-stream-prefix = "ecs"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = "1024"
+  memory                   = "2048"
+  execution_role_arn       = "arn:aws:iam::118273046134:role/ecsTaskExecutionRole1"
+  
+  container_definitions = jsonencode([
+    {
+      name      = "strapi"
+      image     = "118273046134.dkr.ecr.us-east-1.amazonaws.com/gbk-strapi-app:latest"
+      essential = true
+      portMappings = [
+        {
+          containerPort = 1337
+          hostPort      = 1337  # Required for Fargate
+          protocol      = "tcp"
+        }
+      ],
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = aws_cloudwatch_log_group.strapi.name
+          awslogs-region        = "us-east-1"
+          awslogs-stream-prefix = "ecs"
+        }
       }
     }
-  }])
-}
-
-resource "aws_iam_role" "ecs_task_execution" {
-  name = "ecsTaskExecutionRole"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [{
-      Action    = "sts:AssumeRole",
-      Effect    = "Allow",
-      Principal = { Service = "ecs-tasks.amazonaws.com" }
-    }]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "ecs_task_execution_policy" {
-  role       = aws_iam_role.ecs_task_execution.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+  ])
 }
 
 resource "aws_ecs_service" "strapi" {
   name            = "strapi-service"
   cluster         = aws_ecs_cluster.strapi.id
   task_definition = aws_ecs_task_definition.strapi.arn
-  
+  desired_count   = 1
+
+  # Fargate Spot configuration
   capacity_provider_strategy {
     capacity_provider = "FARGATE_SPOT"
     weight            = 100
@@ -198,8 +186,8 @@ resource "aws_ecs_service" "strapi" {
 
   network_configuration {
     subnets          = [aws_subnet.public_a.id, aws_subnet.public_b.id]
-    security_groups  = [aws_security_group.strapi_sg.id]
     assign_public_ip = true
+    security_groups  = [aws_security_group.strapi_sg.id]
   }
 
   load_balancer {
@@ -208,6 +196,9 @@ resource "aws_ecs_service" "strapi" {
     container_port   = 1337
   }
 
-  desired_count = 1
-  depends_on    = [aws_lb_listener.front_end]
+  depends_on = [aws_lb_listener.front_end]
+}
+
+output "strapi_lb_dns" {
+  value = aws_lb.strapi.dns_name
 }
