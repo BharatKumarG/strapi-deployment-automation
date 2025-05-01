@@ -2,36 +2,21 @@ provider "aws" {
   region = "us-east-1"
 }
 
-# VPC
 resource "aws_vpc" "main" {
   cidr_block           = "10.0.0.0/16"
   enable_dns_support   = true
   enable_dns_hostnames = true
-
-  tags = {
-    Name = "gbk-strapi-vpc"
-  }
 }
 
-# Internet Gateway
 resource "aws_internet_gateway" "gw" {
   vpc_id = aws_vpc.main.id
-
-  tags = {
-    Name = "gbk-strapi-gw"
-  }
 }
 
-# Public Subnets
 resource "aws_subnet" "public_a" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = "10.0.1.0/24"
   availability_zone       = "us-east-1a"
   map_public_ip_on_launch = true
-
-  tags = {
-    Name = "gbk-public-subnet-a"
-  }
 }
 
 resource "aws_subnet" "public_b" {
@@ -39,13 +24,8 @@ resource "aws_subnet" "public_b" {
   cidr_block              = "10.0.2.0/24"
   availability_zone       = "us-east-1b"
   map_public_ip_on_launch = true
-
-  tags = {
-    Name = "gbk-public-subnet-b"
-  }
 }
 
-# Route Table
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
 
@@ -53,13 +33,8 @@ resource "aws_route_table" "public" {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.gw.id
   }
-
-  tags = {
-    Name = "gbk-public-rt"
-  }
 }
 
-# Route Table Associations
 resource "aws_route_table_association" "a" {
   subnet_id      = aws_subnet.public_a.id
   route_table_id = aws_route_table.public.id
@@ -70,7 +45,6 @@ resource "aws_route_table_association" "b" {
   route_table_id = aws_route_table.public.id
 }
 
-# Security Group
 resource "aws_security_group" "strapi_sg" {
   name        = "gbk-strapi-sg"
   description = "Allow HTTP and ECS traffic"
@@ -98,20 +72,14 @@ resource "aws_security_group" "strapi_sg" {
   }
 }
 
-# Load Balancer
 resource "aws_lb" "strapi" {
   name               = "gbk-strapi-lb"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.strapi_sg.id]
   subnets            = [aws_subnet.public_a.id, aws_subnet.public_b.id]
-
-  tags = {
-    Name = "gbk-strapi-alb"
-  }
 }
 
-# Target Groups
 resource "aws_lb_target_group" "blue" {
   name        = "gbk-strapi-tg-blue"
   port        = 80
@@ -146,7 +114,6 @@ resource "aws_lb_target_group" "green" {
   }
 }
 
-# Listener
 resource "aws_lb_listener" "front_end" {
   load_balancer_arn = aws_lb.strapi.arn
   port              = "80"
@@ -158,17 +125,14 @@ resource "aws_lb_listener" "front_end" {
   }
 }
 
-# ECS Cluster
 resource "aws_ecs_cluster" "strapi" {
   name = "gbk-strapi-cluster"
 }
 
-# CloudWatch Logs
 resource "aws_cloudwatch_log_group" "strapi" {
   name = "/ecs/gbk-strapi"
 }
 
-# Task Definition
 resource "aws_ecs_task_definition" "strapi" {
   family                   = "gbk-strapi-task"
   network_mode             = "awsvpc"
@@ -198,7 +162,6 @@ resource "aws_ecs_task_definition" "strapi" {
   }])
 }
 
-# ECS Service
 resource "aws_ecs_service" "strapi" {
   name            = "gbk-strapi-service"
   cluster         = aws_ecs_cluster.strapi.id
@@ -225,17 +188,15 @@ resource "aws_ecs_service" "strapi" {
   depends_on = [aws_lb_listener.front_end]
 }
 
-# CodeDeploy Application
 resource "aws_codedeploy_app" "strapi" {
-  name              = "gbk-strapi-codedeploy-app"
-  compute_platform  = "ECS"
+  name             = "gbk-strapi-codedeploy-app"
+  compute_platform = "ECS"
 }
 
-# CodeDeploy Deployment Group
 resource "aws_codedeploy_deployment_group" "strapi" {
-  app_name              = aws_codedeploy_app.strapi.name
-  deployment_group_name = "gbk-strapi-deployment-group"
-  service_role_arn      = "arn:aws:iam::118273046134:role/CodeDeployServiceRole"
+  app_name               = aws_codedeploy_app.strapi.name
+  deployment_group_name  = "gbk-strapi-deployment-group"
+  service_role_arn       = "arn:aws:iam::118273046134:role/CodeDeployServiceRole"
   deployment_config_name = "CodeDeployDefault.ECSAllAtOnce"
 
   deployment_style {
@@ -250,8 +211,8 @@ resource "aws_codedeploy_deployment_group" "strapi" {
     }
 
     deployment_ready_option {
-      action_on_timeout     = "CONTINUE_DEPLOYMENT"
-      wait_time_in_minutes  = 0
+      action_on_timeout    = "CONTINUE_DEPLOYMENT"
+      wait_time_in_minutes = 0
     }
   }
 
@@ -277,7 +238,6 @@ resource "aws_codedeploy_deployment_group" "strapi" {
   }
 }
 
-# Output
 output "strapi_lb_dns" {
   value = aws_lb.strapi.dns_name
 }
