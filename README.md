@@ -242,14 +242,48 @@ https://www.loom.com/share/03a71453854246c19c6642ac508dff35?sid=f1cb0e97-546e-4e
 Hi Team,
 I have successfully completed Task-8: Hosting and Publishing the Strapi Application.
 As part of this task, I have:
-# ✅ Created content types (collections and singles) in Strapi.
-# ✅ Configured roles and permissions to allow public access where needed.
-# ✅ Used the Users & Permissions Plugin to configure access settings.
-# ✅ Published the content and tested it using the public API URL.
+1. **✅ Created content types (collections and singles) in Strapi.**
+2. **✅ Configured roles and permissions to allow public access where needed.**
+3. **✅ Used the Users & Permissions Plugin to configure access settings.**
+4. **✅ Published the content and tested it using the public API URL.**
 🔗 GitHub Repository:  https://github.com/BharatKumarG/strapi-deployment-automation
 
 📽️ Loom Video: [Task_8.mp4](https://1drv.ms/v/s!Ar63PuiQcixJcRBsNLF_D86O4BE?e=FO9qm9)
 Looking forward to your valuable feedback!
 Best regards,
 Guduru Bharat Kumar.
+
+
+## ✅ Task 9 Completion Status
+Hi Team,
+
+I have successfully completed Task-9: Migrating ECS Service to Use Fargate Spot Capacity Provider.
+As part of this task, I have:
+
+1. **✅ Updated the ECS service configuration to use FARGATE_SPOT for cost optimization.**
+   ![image](https://github.com/user-attachments/assets/28ddb215-62db-4fbb-a535-26386c2b396e)
+
+2. **✅ Modified the Terraform infrastructure to remove launch_type and define a capacity provider strategy.**
+  ![image](https://github.com/user-attachments/assets/e04c9231-aa33-4ea7-9278-ef9c5ab67294)
+ 
+3. **✅ Validated the running task is using FARGATE_SPOT using the AWS CLI command:**
+
+bash
+Copy
+Edit
+aws ecs describe-tasks --cluster strapi-cluster --tasks <your-task-id> --query "tasks[].capacityProviderName"
+![image](https://github.com/user-attachments/assets/6a2f7dae-9e28-4e9e-a0dd-9c715b9c4596)
+
+4. **✅ Verified that ECS is correctly provisioning tasks with the Spot capacity provider.**
+   ![image](https://github.com/user-attachments/assets/310fc78a-caaf-4ebf-9183-efc39bcb60dd)
+
+
+🔗 GitHub Repo Link: https://github.com/BharatKumarG/strapi-deployment-automation/tree/main/terraform3/task9
+📽️ Task Demo Video: [Watch Video](https://1drv.ms/v/s!Ar63PuiQcixJc6zp7zF7C1JyLsY?e=fjHgGM)
+
+
+Looking forward to your valuable feedback!
+Best regards,
+Guduru Bharat Kumar
+
 
