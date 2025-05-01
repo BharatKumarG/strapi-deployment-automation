@@ -9,7 +9,7 @@ resource "aws_vpc" "main" {
   enable_dns_hostnames = true
 
   tags = {
-    Name = "strapi-vpc"
+    Name = "gbk-strapi-vpc"
   }
 }
 
@@ -18,7 +18,7 @@ resource "aws_internet_gateway" "gw" {
   vpc_id = aws_vpc.main.id
 
   tags = {
-    Name = "strapi-gw"
+    Name = "gbk-strapi-gw"
   }
 }
 
@@ -30,7 +30,7 @@ resource "aws_subnet" "public_a" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name = "public-subnet-a"
+    Name = "gbk-public-subnet-a"
   }
 }
 
@@ -41,7 +41,7 @@ resource "aws_subnet" "public_b" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name = "public-subnet-b"
+    Name = "gbk-public-subnet-b"
   }
 }
 
@@ -55,11 +55,11 @@ resource "aws_route_table" "public" {
   }
 
   tags = {
-    Name = "public-rt"
+    Name = "gbk-public-rt"
   }
 }
 
-# Associate Route Table to Subnets
+# Route Table Associations
 resource "aws_route_table_association" "a" {
   subnet_id      = aws_subnet.public_a.id
   route_table_id = aws_route_table.public.id
@@ -72,7 +72,7 @@ resource "aws_route_table_association" "b" {
 
 # Security Group
 resource "aws_security_group" "strapi_sg" {
-  name        = "strapi-sg"
+  name        = "gbk-strapi-sg"
   description = "Allow HTTP and ECS traffic"
   vpc_id      = aws_vpc.main.id
 
@@ -100,20 +100,20 @@ resource "aws_security_group" "strapi_sg" {
 
 # Load Balancer
 resource "aws_lb" "strapi" {
-  name               = "strapi-lb"
+  name               = "gbk-strapi-lb"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.strapi_sg.id]
   subnets            = [aws_subnet.public_a.id, aws_subnet.public_b.id]
 
   tags = {
-    Name = "strapi-alb"
+    Name = "gbk-strapi-alb"
   }
 }
 
-# Target Groups for Blue/Green Deployment
+# Target Groups
 resource "aws_lb_target_group" "blue" {
-  name        = "strapi-tg-blue"
+  name        = "gbk-strapi-tg-blue"
   port        = 80
   protocol    = "HTTP"
   target_type = "ip"
@@ -130,7 +130,7 @@ resource "aws_lb_target_group" "blue" {
 }
 
 resource "aws_lb_target_group" "green" {
-  name        = "strapi-tg-green"
+  name        = "gbk-strapi-tg-green"
   port        = 80
   protocol    = "HTTP"
   target_type = "ip"
@@ -160,17 +160,17 @@ resource "aws_lb_listener" "front_end" {
 
 # ECS Cluster
 resource "aws_ecs_cluster" "strapi" {
-  name = "strapi-cluster"
+  name = "gbk-strapi-cluster"
 }
 
 # CloudWatch Logs
 resource "aws_cloudwatch_log_group" "strapi" {
-  name = "/ecs/strapi"
+  name = "/ecs/gbk-strapi"
 }
 
 # Task Definition
 resource "aws_ecs_task_definition" "strapi" {
-  family                   = "strapi-task"
+  family                   = "gbk-strapi-task"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = "1024"
@@ -178,7 +178,7 @@ resource "aws_ecs_task_definition" "strapi" {
   execution_role_arn       = "arn:aws:iam::118273046134:role/ecsTaskExecutionRole1"
 
   container_definitions = jsonencode([{
-    name      = "strapi"
+    name      = "gbk-strapi"
     image     = "118273046134.dkr.ecr.us-east-1.amazonaws.com/gbk-strapi-app:latest"
     essential = true
     portMappings = [
@@ -198,9 +198,9 @@ resource "aws_ecs_task_definition" "strapi" {
   }])
 }
 
-# ECS Service with CodeDeploy
+# ECS Service
 resource "aws_ecs_service" "strapi" {
-  name            = "strapi-service"
+  name            = "gbk-strapi-service"
   cluster         = aws_ecs_cluster.strapi.id
   task_definition = aws_ecs_task_definition.strapi.arn
   desired_count   = 1
@@ -218,7 +218,7 @@ resource "aws_ecs_service" "strapi" {
 
   load_balancer {
     target_group_arn = aws_lb_target_group.blue.arn
-    container_name   = "strapi"
+    container_name   = "gbk-strapi"
     container_port   = 1337
   }
 
@@ -227,14 +227,14 @@ resource "aws_ecs_service" "strapi" {
 
 # CodeDeploy Application
 resource "aws_codedeploy_app" "strapi" {
-  name = "strapi-codedeploy-app"
-  compute_platform = "ECS"
+  name              = "gbk-strapi-codedeploy-app"
+  compute_platform  = "ECS"
 }
 
 # CodeDeploy Deployment Group
 resource "aws_codedeploy_deployment_group" "strapi" {
   app_name              = aws_codedeploy_app.strapi.name
-  deployment_group_name = "strapi-deployment-group"
+  deployment_group_name = "gbk-strapi-deployment-group"
   service_role_arn      = "arn:aws:iam::118273046134:role/CodeDeployServiceRole"
   deployment_config_name = "CodeDeployDefault.ECSAllAtOnce"
 
@@ -245,13 +245,13 @@ resource "aws_codedeploy_deployment_group" "strapi" {
 
   blue_green_deployment_config {
     terminate_blue_instances_on_deployment_success {
-      action = "TERMINATE"
+      action                          = "TERMINATE"
       termination_wait_time_in_minutes = 5
     }
 
     deployment_ready_option {
-      action_on_timeout = "CONTINUE_DEPLOYMENT"
-      wait_time_in_minutes = 0
+      action_on_timeout     = "CONTINUE_DEPLOYMENT"
+      wait_time_in_minutes  = 0
     }
   }
 
