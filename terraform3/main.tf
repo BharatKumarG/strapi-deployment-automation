@@ -54,7 +54,7 @@ resource "aws_route_table_association" "b" {
 }
 
 resource "aws_security_group" "strapi_sg" {
-  name        = "gbk-strapi-sg"
+  name        = "gbkgb-strapi-sg"
   description = "Allow HTTP and ECS traffic"
   vpc_id      = aws_vpc.main.id
 
@@ -81,7 +81,7 @@ resource "aws_security_group" "strapi_sg" {
 }
 
 resource "aws_lb" "strapi" {
-  name               = "gbk-strapi-lb"
+  name               = "gbkgb-strapi-lb"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.strapi_sg.id]
@@ -89,7 +89,7 @@ resource "aws_lb" "strapi" {
 }
 
 resource "aws_lb_target_group" "blue" {
-  name        = "gbk-strapi-tg-blue"
+  name        = "gbkgb-strapi-tg-blue"
   port        = 80
   protocol    = "HTTP"
   target_type = "ip"
@@ -106,7 +106,7 @@ resource "aws_lb_target_group" "blue" {
 }
 
 resource "aws_lb_target_group" "green" {
-  name        = "gbk-strapi-tg-green"
+  name        = "gbkgb-strapi-tg-green"
   port        = 80
   protocol    = "HTTP"
   target_type = "ip"
@@ -134,15 +134,15 @@ resource "aws_lb_listener" "front_end" {
 }
 
 resource "aws_ecs_cluster" "strapi" {
-  name = "gbk-strapi-cluster"
+  name = "gbkgb-strapi-cluster"
 }
 
 resource "aws_cloudwatch_log_group" "strapi" {
-  name = "/ecs/gbk-strapi"
+  name = "/ecs/gbkgb-strapi"
 }
 
 resource "aws_ecs_task_definition" "strapi" {
-  family                   = "gbk-strapi-task"
+  family                   = "gbkgb-strapi-task"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = "1024"
@@ -150,7 +150,7 @@ resource "aws_ecs_task_definition" "strapi" {
   execution_role_arn       = "arn:aws:iam::118273046134:role/ecsTaskExecutionRole1"
 
   container_definitions = jsonencode([{
-    name      = "gbk-strapi"
+    name      = "gbkgb-strapi"
     image     = "118273046134.dkr.ecr.us-east-1.amazonaws.com/gbk-strapi-app:latest"
     essential = true
     portMappings = [
@@ -171,7 +171,7 @@ resource "aws_ecs_task_definition" "strapi" {
 }
 
 resource "aws_ecs_service" "strapi" {
-  name            = "gbk-strapi-service"
+  name            = "gbkgb-strapi-service"
   cluster         = aws_ecs_cluster.strapi.id
   task_definition = aws_ecs_task_definition.strapi.arn
   desired_count   = 1
@@ -189,7 +189,7 @@ resource "aws_ecs_service" "strapi" {
 
   load_balancer {
     target_group_arn = aws_lb_target_group.blue.arn
-    container_name   = "gbk-strapi"
+    container_name   = "gbkgb-strapi"
     container_port   = 1337
   }
 
@@ -197,17 +197,18 @@ resource "aws_ecs_service" "strapi" {
 }
 
 resource "aws_codedeploy_app" "strapi" {
-  name             = "bharatgbkg-strapi-codedeploy-app"
+  name             = "gbkgb-strapi-codedeploy-app"
   compute_platform = "ECS"
+}
 
-  lifecycle {
-    ignore_changes = [tags]
-  }
+resource "aws_iam_role_policy_attachment" "codedeploy_service" {
+  role       = "CodeDeployServiceRole"
+  policy_arn = "arn:aws:iam::aws:policy/AWSCodeDeployRoleForECS"
 }
 
 resource "aws_codedeploy_deployment_group" "strapi" {
   app_name               = aws_codedeploy_app.strapi.name
-  deployment_group_name  = "gbkbhg-strapi-deployment-group"
+  deployment_group_name  = "gbkgb-strapi-deployment-group"
   service_role_arn       = "arn:aws:iam::118273046134:role/CodeDeployServiceRole"
   deployment_config_name = "CodeDeployDefault.ECSAllAtOnce"
 
@@ -218,7 +219,7 @@ resource "aws_codedeploy_deployment_group" "strapi" {
 
   blue_green_deployment_config {
     terminate_blue_instances_on_deployment_success {
-      action                          = "TERMINATE"
+      action                           = "TERMINATE"
       termination_wait_time_in_minutes = 5
     }
 
@@ -248,6 +249,8 @@ resource "aws_codedeploy_deployment_group" "strapi" {
       }
     }
   }
+
+  depends_on = [aws_iam_role_policy_attachment.codedeploy_service]
 }
 
 output "strapi_lb_dns" {
