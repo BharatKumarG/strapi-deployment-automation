@@ -111,9 +111,26 @@ resource "aws_lb" "strapi" {
   }
 }
 
-# Target Group
-resource "aws_lb_target_group" "strapi" {
-  name        = "strapi-tg"
+# Target Groups for Blue/Green Deployment
+resource "aws_lb_target_group" "blue" {
+  name        = "strapi-tg-blue"
+  port        = 80
+  protocol    = "HTTP"
+  target_type = "ip"
+  vpc_id      = aws_vpc.main.id
+
+  health_check {
+    path                = "/"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+    matcher             = "200"
+  }
+}
+
+resource "aws_lb_target_group" "green" {
+  name        = "strapi-tg-green"
   port        = 80
   protocol    = "HTTP"
   target_type = "ip"
@@ -137,7 +154,7 @@ resource "aws_lb_listener" "front_end" {
 
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.strapi.arn
+    target_group_arn = aws_lb_target_group.blue.arn
   }
 }
 
@@ -181,18 +198,13 @@ resource "aws_ecs_task_definition" "strapi" {
   }])
 }
 
-# ECS Service with FARGATE_SPOT
+# ECS Service with CodeDeploy
 resource "aws_ecs_service" "strapi" {
   name            = "strapi-service"
   cluster         = aws_ecs_cluster.strapi.id
   task_definition = aws_ecs_task_definition.strapi.arn
   desired_count   = 1
-
-  # Capacity Provider Strategy for FARGATE_SPOT
-  capacity_provider_strategy {
-    capacity_provider = "FARGATE_SPOT"
-    weight            = 1
-  }
+  launch_type     = "FARGATE"
 
   network_configuration {
     subnets          = [aws_subnet.public_a.id, aws_subnet.public_b.id]
@@ -200,13 +212,69 @@ resource "aws_ecs_service" "strapi" {
     security_groups  = [aws_security_group.strapi_sg.id]
   }
 
+  deployment_controller {
+    type = "CODE_DEPLOY"
+  }
+
   load_balancer {
-    target_group_arn = aws_lb_target_group.strapi.arn
+    target_group_arn = aws_lb_target_group.blue.arn
     container_name   = "strapi"
     container_port   = 1337
   }
 
   depends_on = [aws_lb_listener.front_end]
+}
+
+# CodeDeploy Application
+resource "aws_codedeploy_app" "strapi" {
+  name = "strapi-codedeploy-app"
+  compute_platform = "ECS"
+}
+
+# CodeDeploy Deployment Group
+resource "aws_codedeploy_deployment_group" "strapi" {
+  app_name              = aws_codedeploy_app.strapi.name
+  deployment_group_name = "strapi-deployment-group"
+  service_role_arn      = "arn:aws:iam::118273046134:role/CodeDeployServiceRole"
+  deployment_config_name = "CodeDeployDefault.ECSAllAtOnce"
+
+  deployment_style {
+    deployment_type   = "BLUE_GREEN"
+    deployment_option = "WITH_TRAFFIC_CONTROL"
+  }
+
+  blue_green_deployment_config {
+    terminate_blue_instances_on_deployment_success {
+      action = "TERMINATE"
+      termination_wait_time_in_minutes = 5
+    }
+
+    deployment_ready_option {
+      action_on_timeout = "CONTINUE_DEPLOYMENT"
+      wait_time_in_minutes = 0
+    }
+  }
+
+  ecs_service {
+    cluster_name = aws_ecs_cluster.strapi.name
+    service_name = aws_ecs_service.strapi.name
+  }
+
+  load_balancer_info {
+    target_group_pair_info {
+      prod_traffic_route {
+        listener_arns = [aws_lb_listener.front_end.arn]
+      }
+
+      target_group {
+        name = aws_lb_target_group.blue.name
+      }
+
+      target_group {
+        name = aws_lb_target_group.green.name
+      }
+    }
+  }
 }
 
 # Output
