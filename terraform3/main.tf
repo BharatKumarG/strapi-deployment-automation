@@ -197,7 +197,7 @@ resource "aws_ecs_service" "strapi" {
 }
 
 resource "aws_codedeploy_app" "strapi" {
-  name             = "bharatgbk-strapi-codedeploy-app"
+  name             = "bharatgbkg-strapi-codedeploy-app"
   compute_platform = "ECS"
 
   lifecycle {
@@ -207,7 +207,7 @@ resource "aws_codedeploy_app" "strapi" {
 
 resource "aws_codedeploy_deployment_group" "strapi" {
   app_name               = aws_codedeploy_app.strapi.name
-  deployment_group_name  = "gbkbh-strapi-deployment-group"
+  deployment_group_name  = "gbkbhg-strapi-deployment-group"
   service_role_arn       = "arn:aws:iam::118273046134:role/CodeDeployServiceRole"
   deployment_config_name = "CodeDeployDefault.ECSAllAtOnce"
 
