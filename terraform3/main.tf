@@ -189,7 +189,7 @@ resource "aws_ecs_service" "strapi" {
 }
 
 resource "aws_codedeploy_app" "strapi" {
-  name             = "gbk-strapi-codedeploy-app"
+  name             = "bharat-strapi-codedeploy-app"
   compute_platform = "ECS"
 }
 
