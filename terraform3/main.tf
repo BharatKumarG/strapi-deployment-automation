@@ -1,5 +1,13 @@
 provider "aws" {
   region = "us-east-1"
+
+  ignore_tags {
+    keys = ["*"]
+  }
+
+  skip_credentials_validation = false
+  skip_metadata_api_check     = false
+  skip_requesting_account_id  = false
 }
 
 resource "aws_vpc" "main" {
@@ -191,6 +199,10 @@ resource "aws_ecs_service" "strapi" {
 resource "aws_codedeploy_app" "strapi" {
   name             = "bharatgbk-strapi-codedeploy-app"
   compute_platform = "ECS"
+
+  lifecycle {
+    ignore_changes = [tags]
+  }
 }
 
 resource "aws_codedeploy_deployment_group" "strapi" {
