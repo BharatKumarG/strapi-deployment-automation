@@ -249,7 +249,7 @@ resource "aws_codedeploy_app" "strapi" {
 resource "aws_codedeploy_deployment_group" "strapi" {
   app_name               = aws_codedeploy_app.strapi.name
   deployment_group_name  = "gbkbh-strapi-deployment-group"
-  service_role_arn       = "arn:aws:iam::118273046134:role/CodeDeployServiceRole"
+  service_role_arn       = "arn:aws:iam::118273046134:role/codedeploy-ecs-role"
   deployment_config_name = "CodeDeployDefault.ECSAllAtOnce"
 
   deployment_style {
