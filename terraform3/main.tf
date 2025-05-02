@@ -123,7 +123,7 @@ resource "aws_lb" "strapi" {
 
 # Target Groups
 resource "aws_lb_target_group" "blue" {
-  name        = "gbk-strapi-tg-blue"
+  name        = "gbk-strapi-blue"
   port        = 80
   protocol    = "HTTP"
   target_type = "ip"
@@ -140,7 +140,7 @@ resource "aws_lb_target_group" "blue" {
 }
 
 resource "aws_lb_target_group" "green" {
-  name        = "gbk-strapi-tg-green"
+  name        = "gbk-strapi-green"
   port        = 80
   protocol    = "HTTP"
   target_type = "ip"
@@ -249,7 +249,7 @@ resource "aws_codedeploy_app" "strapi" {
 resource "aws_codedeploy_deployment_group" "strapi" {
   app_name               = aws_codedeploy_app.strapi.name
   deployment_group_name  = "gbkbh-strapi-deployment-group"
-  service_role_arn       = "arn:aws:iam::118273046134:role/codedeploy-ecs-role"
+  service_role_arn       = "arn:aws:iam::118273046134:role/CodeDeployServiceRole"
   deployment_config_name = "CodeDeployDefault.ECSAllAtOnce"
 
   deployment_style {
