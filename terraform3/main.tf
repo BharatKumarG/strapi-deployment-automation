@@ -2,24 +2,37 @@ provider "aws" {
   region = "us-east-1"
 }
 
+##################
+# Networking
+##################
+
 # VPC
 resource "aws_vpc" "main" {
   cidr_block           = "10.0.0.0/16"
   enable_dns_support   = true
   enable_dns_hostnames = true
+  tags = {
+    Name = "gbk-main-vpc"
+  }
 }
 
 # Internet Gateway
 resource "aws_internet_gateway" "gw" {
   vpc_id = aws_vpc.main.id
+  tags = {
+    Name = "gbk-igw"
+  }
 }
 
-# Subnets
+# Public Subnets
 resource "aws_subnet" "public_a" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = "10.0.1.0/24"
   availability_zone       = "us-east-1a"
   map_public_ip_on_launch = true
+  tags = {
+    Name = "gbk-public-subnet-a"
+  }
 }
 
 resource "aws_subnet" "public_b" {
@@ -27,11 +40,17 @@ resource "aws_subnet" "public_b" {
   cidr_block              = "10.0.2.0/24"
   availability_zone       = "us-east-1b"
   map_public_ip_on_launch = true
+  tags = {
+    Name = "gbk-public-subnet-b"
+  }
 }
 
-# Route Table
+# Route Table and Association
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
+  tags = {
+    Name = "gbk-public-rt"
+  }
 
   route {
     cidr_block = "0.0.0.0/0"
@@ -39,7 +58,6 @@ resource "aws_route_table" "public" {
   }
 }
 
-# Route Table Associations
 resource "aws_route_table_association" "a" {
   subnet_id      = aws_subnet.public_a.id
   route_table_id = aws_route_table.public.id
@@ -50,13 +68,17 @@ resource "aws_route_table_association" "b" {
   route_table_id = aws_route_table.public.id
 }
 
-# Security Group
+##################
+# Security
+##################
+
 resource "aws_security_group" "strapi_sg" {
   name        = "gbk-strapi-sg"
-  description = "Allow HTTP and ECS traffic"
+  description = "Allow HTTP (80) and Strapi (1337)"
   vpc_id      = aws_vpc.main.id
 
   ingress {
+    description = "Allow HTTP"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
@@ -64,6 +86,7 @@ resource "aws_security_group" "strapi_sg" {
   }
 
   ingress {
+    description = "Allow Strapi"
     from_port   = 1337
     to_port     = 1337
     protocol    = "tcp"
@@ -76,15 +99,26 @@ resource "aws_security_group" "strapi_sg" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  tags = {
+    Name = "gbk-strapi-sg"
+  }
 }
 
+##################
 # Load Balancer
+##################
+
 resource "aws_lb" "strapi" {
   name               = "gbk-strapi-lb"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.strapi_sg.id]
   subnets            = [aws_subnet.public_a.id, aws_subnet.public_b.id]
+
+  tags = {
+    Name = "gbk-strapi-lb"
+  }
 }
 
 # Target Groups
@@ -125,7 +159,7 @@ resource "aws_lb_target_group" "green" {
 # Listener
 resource "aws_lb_listener" "front_end" {
   load_balancer_arn = aws_lb.strapi.arn
-  port              = "80"
+  port              = 80
   protocol          = "HTTP"
 
   default_action {
@@ -134,17 +168,21 @@ resource "aws_lb_listener" "front_end" {
   }
 }
 
-# ECS Cluster
+##################
+# ECS Configuration
+##################
+
+# Cluster
 resource "aws_ecs_cluster" "strapi" {
   name = "gbk-strapi-cluster"
 }
 
-# CloudWatch Log Group
+# CloudWatch Logs
 resource "aws_cloudwatch_log_group" "strapi" {
   name = "/ecs/gbk-strapi"
 }
 
-# ECS Task Definition (using provided execution role)
+# Task Definition
 resource "aws_ecs_task_definition" "strapi" {
   family                   = "gbk-strapi-task"
   network_mode             = "awsvpc"
@@ -172,7 +210,7 @@ resource "aws_ecs_task_definition" "strapi" {
   }])
 }
 
-# ECS Service (with CodeDeploy controller)
+# ECS Service
 resource "aws_ecs_service" "strapi" {
   name            = "gbk-strapi-service"
   cluster         = aws_ecs_cluster.strapi.id
@@ -199,13 +237,15 @@ resource "aws_ecs_service" "strapi" {
   depends_on = [aws_lb_listener.front_end]
 }
 
-# CodeDeploy App
+##################
+# CodeDeploy
+##################
+
 resource "aws_codedeploy_app" "strapi" {
   name             = "bharatgbk-strapi-codedeploy-app"
   compute_platform = "ECS"
 }
 
-# CodeDeploy Deployment Group (using provided CodeDeploy role)
 resource "aws_codedeploy_deployment_group" "strapi" {
   app_name               = aws_codedeploy_app.strapi.name
   deployment_group_name  = "gbkbh-strapi-deployment-group"
@@ -251,7 +291,10 @@ resource "aws_codedeploy_deployment_group" "strapi" {
   }
 }
 
-# Output ALB DNS
+##################
+# Output
+##################
+
 output "strapi_lb_dns" {
   value = aws_lb.strapi.dns_name
 }
