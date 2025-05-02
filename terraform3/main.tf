@@ -1,13 +1,5 @@
 provider "aws" {
   region = "us-east-1"
-
-  ignore_tags {
-    keys = ["*"]
-  }
-
-  skip_credentials_validation = false
-  skip_metadata_api_check     = false
-  skip_requesting_account_id  = false
 }
 
 resource "aws_vpc" "main" {
@@ -54,7 +46,7 @@ resource "aws_route_table_association" "b" {
 }
 
 resource "aws_security_group" "strapi_sg" {
-  name        = "gbkgb-strapi-sg"
+  name        = "gbk-strapi-sg"
   description = "Allow HTTP and ECS traffic"
   vpc_id      = aws_vpc.main.id
 
@@ -81,7 +73,7 @@ resource "aws_security_group" "strapi_sg" {
 }
 
 resource "aws_lb" "strapi" {
-  name               = "gbkgb-strapi-lb"
+  name               = "gbk-strapi-lb"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.strapi_sg.id]
@@ -89,7 +81,7 @@ resource "aws_lb" "strapi" {
 }
 
 resource "aws_lb_target_group" "blue" {
-  name        = "gbkgb-strapi-tg-blue"
+  name        = "gbk-strapi-tg-blue"
   port        = 80
   protocol    = "HTTP"
   target_type = "ip"
@@ -106,7 +98,7 @@ resource "aws_lb_target_group" "blue" {
 }
 
 resource "aws_lb_target_group" "green" {
-  name        = "gbkgb-strapi-tg-green"
+  name        = "gbk-strapi-tg-green"
   port        = 80
   protocol    = "HTTP"
   target_type = "ip"
@@ -134,15 +126,15 @@ resource "aws_lb_listener" "front_end" {
 }
 
 resource "aws_ecs_cluster" "strapi" {
-  name = "gbkgb-strapi-cluster"
+  name = "gbk-strapi-cluster"
 }
 
 resource "aws_cloudwatch_log_group" "strapi" {
-  name = "/ecs/gbkgb-strapi"
+  name = "/ecs/gbk-strapi"
 }
 
 resource "aws_ecs_task_definition" "strapi" {
-  family                   = "gbkgb-strapi-task"
+  family                   = "gbk-strapi-task"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = "1024"
@@ -150,15 +142,13 @@ resource "aws_ecs_task_definition" "strapi" {
   execution_role_arn       = "arn:aws:iam::118273046134:role/ecsTaskExecutionRole1"
 
   container_definitions = jsonencode([{
-    name      = "gbkgb-strapi"
+    name      = "gbk-strapi"
     image     = "118273046134.dkr.ecr.us-east-1.amazonaws.com/gbk-strapi-app:latest"
     essential = true
-    portMappings = [
-      {
-        containerPort = 1337
-        hostPort      = 1337
-      }
-    ],
+    portMappings = [{
+      containerPort = 1337
+      hostPort      = 1337
+    }],
     logConfiguration = {
       logDriver = "awslogs",
       options = {
@@ -171,7 +161,7 @@ resource "aws_ecs_task_definition" "strapi" {
 }
 
 resource "aws_ecs_service" "strapi" {
-  name            = "gbkgb-strapi-service"
+  name            = "gbk-strapi-service"
   cluster         = aws_ecs_cluster.strapi.id
   task_definition = aws_ecs_task_definition.strapi.arn
   desired_count   = 1
@@ -189,7 +179,7 @@ resource "aws_ecs_service" "strapi" {
 
   load_balancer {
     target_group_arn = aws_lb_target_group.blue.arn
-    container_name   = "gbkgb-strapi"
+    container_name   = "gbk-strapi"
     container_port   = 1337
   }
 
@@ -197,18 +187,13 @@ resource "aws_ecs_service" "strapi" {
 }
 
 resource "aws_codedeploy_app" "strapi" {
-  name             = "gbkgb-strapi-codedeploy-app"
+  name             = "bharatgbk-strapi-codedeploy-app"
   compute_platform = "ECS"
-}
-
-resource "aws_iam_role_policy_attachment" "codedeploy_service" {
-  role       = "CodeDeployServiceRole"
-  policy_arn = "arn:aws:iam::aws:policy/AWSCodeDeployRoleForECS"
 }
 
 resource "aws_codedeploy_deployment_group" "strapi" {
   app_name               = aws_codedeploy_app.strapi.name
-  deployment_group_name  = "gbkgb-strapi-deployment-group"
+  deployment_group_name  = "gbkbh-strapi-deployment-group"
   service_role_arn       = "arn:aws:iam::118273046134:role/CodeDeployServiceRole"
   deployment_config_name = "CodeDeployDefault.ECSAllAtOnce"
 
@@ -219,7 +204,7 @@ resource "aws_codedeploy_deployment_group" "strapi" {
 
   blue_green_deployment_config {
     terminate_blue_instances_on_deployment_success {
-      action                           = "TERMINATE"
+      action                          = "TERMINATE"
       termination_wait_time_in_minutes = 5
     }
 
@@ -249,8 +234,6 @@ resource "aws_codedeploy_deployment_group" "strapi" {
       }
     }
   }
-
-  depends_on = [aws_iam_role_policy_attachment.codedeploy_service]
 }
 
 output "strapi_lb_dns" {
